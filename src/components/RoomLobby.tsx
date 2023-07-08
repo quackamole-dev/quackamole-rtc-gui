@@ -14,12 +14,16 @@ export const RoomLobby: Component<{ quackamole: QuackamoleRTCClient, room: IBase
   };
 
   return <>
-    <Show when={registerUserError()}>
-      <div>{registerUserError()}</div>
-    </Show>
-    <div>Join the Meeting</div>
-    <input ref={el => nameInput = el} type="text" placeholder="Enter your display name" />
-    <button onclick={() => registerUser(nameInput.value)}>Enter</button>
+    <div class="flex justify-center items-center flex-col h-full bg-stone-950">
+      <div class="flex flex-col max-w-[600px] min-w-[400px] p-10 rounded border-stone-600 border bg-stone-800">
+        <Show when={registerUserError()}>
+          <div>{registerUserError()}</div>
+        </Show>
+        <div>Join the Meeting</div>
+        <input ref={el => nameInput = el} type="text" placeholder="Enter your display name" />
+        <button onclick={() => registerUser(nameInput.value)}>Enter</button>
+      </div>
+    </div>
   </>;
 };
 

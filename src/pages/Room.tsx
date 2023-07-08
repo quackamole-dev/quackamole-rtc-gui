@@ -1,4 +1,4 @@
-import "./Room.css";
+// import "./Room.css";
 import { Accessor, Component, For, Show, createEffect, createSignal, onMount } from 'solid-js';
 import { useFetch, useLocalStorage } from 'solidjs-use';
 import { LivingRoom } from '../components/LivingRoom';
@@ -27,7 +27,12 @@ export const Room: Component = () => {
   const { data, error, abort, statusCode, isFetching, isFinished } = useFetch<IBaseRoom>(`http://localhost:12000/rooms/${params.id}`).get().json();
 
   onMount(() => {
-    const grid = new QuackamoleGrid('grid-container', 'grid-item');
+    setTimeout(() => {
+      // QuackamoleGrid.init('grid-container', 16, 10, 6, 6);
+      // QuackamoleGrid.registerGridItem('iframe-wrapper', 1, 1, 14, 10);
+      // QuackamoleGrid.registerGridItem('mediabar', 14, 1, 17, 11);
+      // QuackamoleGrid.registerGridItem('actionbar', 1, 10, 14, 11);
+    }, 1000);
   });
 
   createEffect(async () => {
@@ -36,6 +41,11 @@ export const Room: Component = () => {
     if (!displayName()) return;
     if (!localUser()?.id && socketStatus() === 'open') await quackamole.loginUser();
     if (!r?.id || !u) return;
+    QuackamoleGrid.init('grid-container', 16, 10, 6, 6);
+    QuackamoleGrid.registerGridItem('iframe-wrapper', 1, 1, 14, 10);
+    QuackamoleGrid.registerGridItem('mediabar', 14, 1, 17, 11);
+    QuackamoleGrid.registerGridItem('actionbar', 1, 10, 14, 11);
+
     quackamole.joinRoom(r.id);
   });
 
@@ -69,27 +79,28 @@ export const Room: Component = () => {
   quackamole.onlocaluserdata = user => setLocalUser(user);
   // quackamole.onsetplugin = plugin => iframeRef.src = plugin?.url || '';
 
-  return <div class="flex flex-col h-screen" id='grid-container'>
+  return <>
     <Show when={socketStatus() === 'open' && data()?.id} fallback={'Loading...'}>
       <Show when={displayName()} fallback={<RoomLobby quackamole={quackamole} room={data()!} />}>
+        <div class="flex flex-col h-screen" id='grid-container'>
 
-        {/* <RoomMedia localStream={localMediaStream()} localUser={localUser()} remoteStreams={mediaStreams()} remoteUsers={users()}></RoomMedia> */}
+          {/* <iframe ref={el => iframeRef = el} class="iframe grid-item" id="plugin-iframe" style={{ width: '100%', height: '100%', border: 'none' }} title={'plugin'} /> */}
+          <div id="iframe-wrapper" class="border bg-stone-800 rounded border-stone-600"></div>
 
-        {/* <iframe ref={el => iframeRef = el} class="iframe grid-item" id="plugin-iframe" style={{ width: '100%', height: '100%', border: 'none' }} title={'plugin'} /> */}
-        <div id="iframe-wrapper" class="iframe grid-item"></div>
-
-        <div id="media-content" class="mediabar grid-item">
+          <RoomMedia localStream={localMediaStream} localUser={localUser} remoteStreams={mediaStreams} remoteUsers={users}></RoomMedia>
+          {/* <div id="mediabar">
           <GenericMediaStream stream={localMediaStream()}></GenericMediaStream>
           <For each={Array.from(users())} fallback={<div>No remote media...</div>}>
-            {([id, user]) => <GenericMediaStream user={user} stream={mediaStreams().get(id)}></GenericMediaStream>}
+          {([id, user]) => <GenericMediaStream user={user} stream={mediaStreams().get(id)}></GenericMediaStream>}
           </For>
+        </div> */}
+
+          <RoomActionbar quackamole={quackamole} />
+
         </div>
-
-        <RoomActionbar quackamole={quackamole} />
-
       </Show>
     </Show>
-  </div>;
+  </>;
 };
 
 

@@ -10,11 +10,12 @@ export class QuackamoleRTCClient {
   private localStreamMicEnabled = true;
   private localStreamCamEnabled = true;
 
+  private iframe: HTMLIFrameElement | null = null;
   private readonly awaitedPromises: Record<AwaitId, IAwaitedPromise> = {};
   private readonly connections: Map<IUser['id'], PeerConnection> = new Map();
   private readonly streams: Map<IUser['id'], MediaStream> = new Map();
   private readonly users: Map<IUser['id'], IUser> = new Map();
-  private iframe: HTMLIFrameElement | null = null;
+  private readonly iframeContainerLocator: any;
 
   constructor(url: string, iframeContainerLocator: string) {
     console.log('QuackamoleRTCClient constructor', url);
@@ -23,16 +24,16 @@ export class QuackamoleRTCClient {
     this.socket.onopen = evt => this.onsocketstatus('open', evt);
     this.socket.onclose = evt => this.onsocketstatus('closed', evt);
     this.socket.onerror = evt => this.onsocketstatus('error', evt);
+    this.iframeContainerLocator = iframeContainerLocator;
 
-    setTimeout(() => {
+    // setTimeout(() => {
+    //   this.iframe = document.createElement('iframe');
+    //   this.iframe.style.cssText = `width: 100%; height: 100%; border: none`;
+    //   document.querySelector(iframeContainerLocator)?.appendChild(this.iframe);
+    //   if (!document.body.contains(this.iframe)) throw new Error(`iframe could not be attached to locator: "${iframeContainerLocator}"`);
+    // }, 1000);
 
-      this.iframe = document.createElement('iframe');
-      this.iframe.style.cssText = `width: 100%; height: 100%; border: none`;
-      document.querySelector(iframeContainerLocator)?.appendChild(this.iframe);
-      if (!document.body.contains(this.iframe)) throw new Error(`iframe could not be attached to locator: "${iframeContainerLocator}"`);
-    }, 1000);
-
-    console.log('---------iframe', this.iframe);
+    // console.log('---------iframe', this.iframe);
     window.addEventListener('message', evt => evt.data.type && evt.data.type.startsWith('PLUGIN') && this.handlePluginMessageLegacy(evt.data));
   }
 
@@ -71,10 +72,17 @@ export class QuackamoleRTCClient {
     }
   }
 
-  async setPlugin(plugin: IPlugin): Promise<void> {
-    this.socket.send(JSON.stringify({ action: 'plugin_set', data: { pluginId: plugin.id } }));
+  async setPlugin(plugin: IPlugin, iframe: HTMLIFrameElement): Promise<void> {
+    if (!this.iframe) {
+      this.iframe = document.createElement('iframe');
+      this.iframe.style.cssText = `width: 100%; height: 100%; border: none`;
+      document.querySelector(this.iframeContainerLocator)?.appendChild(this.iframe);
+      if (!document.body.contains(this.iframe)) throw new Error(`iframe could not be attached to locator: "${this.iframeContainerLocator}"`);
+    }
+
     this.currentPlugin = plugin;
-    if (this.iframe) this.iframe.src = plugin.url;
+    this.iframe.src = plugin.url;
+    this.socket.send(JSON.stringify({ action: 'plugin_set', data: { pluginId: plugin.id } }));
     this.onsetplugin(plugin);
   }
 
@@ -220,7 +228,7 @@ export class QuackamoleRTCClient {
     if (message.type === 'PLUGIN_SEND_TO_ALL_PEERS') this.sendPluginMessageToAllConnections(message);
     else if (message.type === 'PLUGIN_SEND_TO_PEER') this.sendPluginMessageToConnection(message);
   }
-  
+
   private sendPluginMessageToAllConnections(message: IPluginMessage) {
     const data = { type: 'PLUGIN_DATA', payload: message.payload };
     console.log('-------------LEGACY PLUGIN MESSAGE---', data, this.connections);
@@ -529,8 +537,8 @@ export interface IUserLoginMessage extends IBaseSocketToServerMessage {
 
 export interface IPluginMessage {
   type: 'PLUGIN_SEND_TO_ALL_PEERS' | 'PLUGIN_SEND_TO_PEER';
-   payload: unknown;
-   socketId: string;
+  payload: unknown;
+  socketId: string;
 }
 
 // export interface IPluginMessage {
@@ -550,3 +558,11 @@ export interface IUserSecret {
   userId: string;
   secret: string;
 }
+
+// TODOS
+//  - toggle audio/video
+//  - all users in room can see stream of each other
+//  - save room layout as backend metadata and restore on join
+//  - join as admin
+//  - super basic styling
+//  - 
