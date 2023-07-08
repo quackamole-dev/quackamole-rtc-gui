@@ -1,11 +1,19 @@
 import {useParams} from '@solidjs/router';
 import type {Component} from 'solid-js';
+import { useLocalStorage } from 'solidjs-use';
+
+interface LivingRoomProps {
+  connections: PeerConnection[];
+}
 
 export const LivingRoom: Component = props => {
+  const [displayName, setDisplayName] = useLocalStorage('displayName', '');
+
   const params = useParams();
 
   return <>
     <div>
+    <div>{'Hello ' + displayName()}</div>
       <div>Room</div>
     </div>
   </>;

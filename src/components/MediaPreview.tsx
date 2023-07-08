@@ -1,5 +1,5 @@
 import {Component} from 'solid-js';
-import {MediaStreamCard} from './GenericMediaCard';
+import {GenericMediaStream} from './GenericMediaStream';
 
 export const MediaPreview: Component = () => {
 
@@ -8,7 +8,7 @@ export const MediaPreview: Component = () => {
     <button onClick={handleClickOpen}>Preview Audio & Video Settings</button>
 
     <div>
-      <MediaStreamCard stream={localStreamWrapper ? localStreamWrapper.stream : null} muted={false}/>
+      <GenericMediaStream stream={localStreamWrapper ? localStreamWrapper.stream : null} muted={false}/>
       <button style={{height: '100%'}} onClick={toggleCameraEnabled}>Toggle Camera</button>
       <button style={{height: '100%'}} onClick={toggleMicrophoneEnabled}>toggle Microphone</button>
 

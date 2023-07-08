@@ -1,9 +1,5 @@
-import { A, useParams } from '@solidjs/router';
 import type { Component } from 'solid-js';
-import { createResource, createSignal, Show } from 'solid-js';
 import { RoomCreator } from '../components/RoomCreator';
-import { RoomLobby } from '../components/RoomLobby';
-import { awaitedPromises, IAwaitedPromise, socket } from '../contexts/awaitedPromises';
 
 export const Home: Component = () => {
 

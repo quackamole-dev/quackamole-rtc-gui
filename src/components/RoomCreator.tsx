@@ -1,13 +1,13 @@
-import type {Component} from 'solid-js';
-import {createMemo, createSignal, Show} from 'solid-js';
-import {A, useParams} from '@solidjs/router';
-import {useClipboard} from 'solidjs-use';
-import {TextCopyOutput} from './TextCopyOutput';
+import type { Component } from 'solid-js';
+import { createMemo, createSignal, Show } from 'solid-js';
+import { A, useParams } from '@solidjs/router';
+import { TextCopyOutput } from './TextCopyOutput';
+import { IAdminRoom, IBaseRoom, QuackamoleRTCClient } from '../quackamole-rtc/quackamole';
 
 export const RoomCreator: Component = () => {
   const params = useParams();
 
-  const [room, setRoom] = createSignal<{ id: string, adminId: string } | null>(null);
+  const [room, setRoom] = createSignal<IAdminRoom | null>(null);
   const [error, setError] = createSignal('');
 
   const roomGuestUrl = createMemo(() => `${location.origin}/${room()?.id}`);
@@ -17,12 +17,8 @@ export const RoomCreator: Component = () => {
   // const { text, copy, copied, isSupported } = useClipboard({ source: roomGuestUrl })
 
   async function createRoom() {
-    try {
-      const res = await fetch(`http://localhost:12000/rooms`, {method: 'post', mode: 'cors'});
-      setRoom(await res.json());
-    } catch (e) {
-      setError('failed to create room');
-    }
+    const room = await QuackamoleRTCClient.createRoom();
+    room instanceof Error ? setError(room.message) : setRoom(room);
   }
 
   return <>
@@ -36,10 +32,10 @@ export const RoomCreator: Component = () => {
       <Show when={room()}>
         <div class="text-2xl">Created</div>
         <div>Share this link with others:</div>
-        <TextCopyOutput text={roomGuestUrl}/>
+        <TextCopyOutput text={roomGuestUrl} />
 
         <div>Share this link with other Moderators:</div>
-        <TextCopyOutput text={roomAdminUrl}/>
+        <TextCopyOutput text={roomAdminUrl} />
         <A href={`/${room()?.adminId}`}>Join as Moderator</A>
       </Show>
     </div>

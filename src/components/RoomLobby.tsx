@@ -1,20 +1,25 @@
-import {useParams} from '@solidjs/router';
-import {Setter, Show} from 'solid-js';
-import type {Component} from 'solid-js';
-import {useFetch} from 'solidjs-use';
+import { Component, Show, createSignal } from 'solid-js';
+import { useLocalStorage } from 'solidjs-use';
+import { IBaseRoom, QuackamoleRTCClient } from '../quackamole-rtc/quackamole';
 
-export const RoomLobby: Component<{ setDisplayName: Setter<string> }> = props => {
-  const params = useParams();
-  const {data, error, abort, statusCode, isFetching, isFinished} = useFetch(`http://localhost:12000/rooms/${params.id}`).get();
-
+export const RoomLobby: Component<{ quackamole: QuackamoleRTCClient, room: IBaseRoom }> = props => {
   let nameInput: HTMLInputElement;
+  const [_, setDisplayName] = useLocalStorage('displayName', '');
+  const [registerUserError, setRegisterUserError] = createSignal('');
+
+  const registerUser = async (displayName: string): Promise<void> => {
+    const res = await props.quackamole.registerUser(displayName);
+    if (res instanceof Error) setRegisterUserError(res.message);
+    else setDisplayName(res.displayName);
+  };
+
   return <>
-    <Show when={isFinished} fallback={'loading room...'}>
-      <div>Join the Meeting</div>
-      <div>{JSON.stringify(data)}</div>
-      <input ref={el => nameInput = el} type="text" placeholder="Enter your display name"/>
-      <button onclick={() => props.setDisplayName(nameInput.value)}>Enter</button>
+    <Show when={registerUserError()}>
+      <div>{registerUserError()}</div>
     </Show>
+    <div>Join the Meeting</div>
+    <input ref={el => nameInput = el} type="text" placeholder="Enter your display name" />
+    <button onclick={() => registerUser(nameInput.value)}>Enter</button>
   </>;
 };
 

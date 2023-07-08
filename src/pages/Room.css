@@ -1,0 +1,92 @@
+
+
+.resizer {
+  border: 1px solid black;
+  position: absolute;
+  cursor: pointer;
+  opacity: 0;
+  z-index: 1001;
+}
+
+.resizer-left {
+  width: var(--resizer-size);
+  top: 0;
+  bottom: 0;
+  left: 0;
+  cursor: w-resize;
+}
+
+.resizer-right {
+  width: var(--resizer-size);
+  top: 0;
+  bottom: 0;
+  right: 0;
+  cursor: e-resize;
+}
+
+.resizer-top {
+  height: var(--resizer-size);
+  top: 0;
+  left: 0;
+  right: 0;
+  cursor: n-resize;
+}
+
+.resizer-bottom {
+  height: var(--resizer-size);
+  bottom: 0;
+  left: 0;
+  right: 0;
+  cursor: s-resize;
+}
+
+.grid-item {
+  /* background-color: salmon; */
+  /* background-color: rgb(14, 0, 0); */
+  border: 1px solid grey;
+  /* https://css-tricks.com/almanac/properties/r/resize/ */
+  /* resize: both; */
+  overflow: visible;
+  position: relative;
+  border-radius: 4px;
+  display: flex;
+  /* padding: var(--resizer-size); */
+}
+
+.grid-item.resizing::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+/* ---------------------------------- */
+
+.iframe {
+  grid-column-start: 1;
+  grid-column-end: 22;
+  grid-row-start: 1;
+  grid-row-end: 17;
+}
+
+.iframe iframe {
+  border-radius: 4px;
+}
+
+.mediabar {
+  grid-column-start: 22;
+  grid-column-end: 25;
+  grid-row-start: 1;
+  grid-row-end: 19;
+}
+
+.actionbar {
+  grid-column-start: 1;
+  grid-column-end: 22;
+  grid-row-start: 17;
+  grid-row-end: 19;
+}
