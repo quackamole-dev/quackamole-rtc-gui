@@ -72,7 +72,7 @@ export class QuackamoleRTCClient {
     }
   }
 
-  async setPlugin(plugin: IPlugin, iframe: HTMLIFrameElement): Promise<void> {
+  async setPlugin(plugin: IPlugin): Promise<void> {
     if (!this.iframe) {
       this.iframe = document.createElement('iframe');
       this.iframe.style.cssText = `width: 100%; height: 100%; border: none`;
