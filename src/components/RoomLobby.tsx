@@ -1,7 +1,7 @@
 import { Component, Show, createSignal } from 'solid-js';
 import { useLocalStorage } from 'solidjs-use';
-import { QuackamoleRTCClient } from '../quackamole-rtc/quackamole';
 import { IBaseRoom } from 'quackamole-shared-types';
+import { QuackamoleRTCClient } from 'quackamole-rtc-client';
 
 export const RoomLobby: Component<{ quackamole: QuackamoleRTCClient, room: IBaseRoom }> = props => {
   let nameInput: HTMLInputElement;
@@ -25,7 +25,7 @@ export const RoomLobby: Component<{ quackamole: QuackamoleRTCClient, room: IBase
         </Show>
         <div>Join the Meeting</div>
         <input ref={el => nameInput = el} type="text" placeholder="Enter your display name" />
-        <button onclick={() => registerUser(nameInput.value)}>Enter</button>
+        <button onClick={() => registerUser(nameInput.value)}>Enter</button>
       </div>
     </div>
   </>;

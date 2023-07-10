@@ -1,21 +1,16 @@
 import type { Component } from 'solid-js';
 import { createMemo, createSignal, Show } from 'solid-js';
-import { A, useParams } from '@solidjs/router';
+import { A } from '@solidjs/router';
 import { TextCopyOutput } from './TextCopyOutput';
-import { QuackamoleHttpClient } from '../quackamole-rtc/QuackamoleHttp';
 import { IAdminRoom } from 'quackamole-shared-types';
+import { QuackamoleHttpClient } from 'quackamole-rtc-client';
 
 export const RoomCreator: Component = () => {
-  const params = useParams();
-
   const [room, setRoom] = createSignal<IAdminRoom | null>(null);
   const [error, setError] = createSignal('');
 
   const roomGuestUrl = createMemo(() => `${location.origin}/${room()?.id}`);
   const roomAdminUrl = createMemo(() => `${location.origin}/${room()?.adminId}`);
-
-  // const [input, setInput] = createSignal('');
-  // const { text, copy, copied, isSupported } = useClipboard({ source: roomGuestUrl })
 
   async function createRoom() {
     const room = await QuackamoleHttpClient.createRoom();
@@ -27,7 +22,7 @@ export const RoomCreator: Component = () => {
       <div class="flex flex-col max-w-[600px] min-w-[400px] p-10 rounded border-stone-600 border bg-stone-800">
         <Show when={!room()}>
           <h1 class="m-auto">Quackamole</h1>
-          <button onclick={createRoom} class="mt-3 flex w-full justify-center rounded-md bg-indigo-600 px-6 py-3 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Create Room</button>
+          <button onClick={createRoom} class="mt-3 flex w-full justify-center rounded-md bg-indigo-600 px-6 py-3 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Create Room</button>
           <Show when={error()}>
             <div>{error()}</div>
           </Show>

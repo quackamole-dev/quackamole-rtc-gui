@@ -9,8 +9,8 @@ export const setVideoSrc = (videoRef: HTMLAudioElement, stream: MediaStream | nu
     videoRef.srcObject = stream;
     videoRef.oncanplay = () => { // FIXME rarely does not get fired for all peers, so remote stream can appear white
       // if (videoRef.currentSrc) {
-        videoRef.play();
-        videoRef.muted = muted;
+      videoRef.play();
+      videoRef.muted = muted;
       // }
     };
   }

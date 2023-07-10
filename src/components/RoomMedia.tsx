@@ -9,8 +9,8 @@ export const RoomMedia: Component<RoomMediaProps> = props => {
 
   return (
     <div id="mediabar" class="bg-stone-800 border rounded border-stone-600 p-[5px] select-none" ref={el => QuackamoleGrid.registerGridItem(el, 14, 1, 17, 11)}>
-      <GenericMediaStream user={props.localUser} flipX={true} mute={true}></GenericMediaStream>
-      <For each={validUsers()}>{user => <GenericMediaStream user={user} mute={false}></GenericMediaStream>}</For>
+      <GenericMediaStream user={props.localUser} flipX={true} mute={true} />
+      <For each={validUsers()}>{user => <GenericMediaStream user={user} mute={false} />}</For>
     </div>
   );
 };

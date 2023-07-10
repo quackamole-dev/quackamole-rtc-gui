@@ -24,8 +24,8 @@ export class QuackamoleGrid {
   private static gridRowEnd = -1;
 
   static init(container: HTMLElement, columns = 16, rows = 10, gridGap = 6) {
-    if (!container) throw new Error(`Container not passed`);
-    if (!container.id) throw new Error(`Container needs to have an id`);
+    if (!container) throw new Error('Container not passed');
+    if (!container.id) throw new Error('Container needs to have an id');
     container.classList.add(this.CLASS_GRID_CONTAINER);
     // Applying specific styles inline ensures that we can have multiple differently configured grid containers if needed.
     container.style.cssText = `
@@ -41,17 +41,17 @@ export class QuackamoleGrid {
     const style: HTMLStyleElement = document.createElement('style');
     style.id = 'quackamole-grid-styles';
     style.appendChild(document.createTextNode(this.quackamoleGridCssFactory()));
-    document.head.insertAdjacentElement("beforeend", style);
+    document.head.insertAdjacentElement('beforeend', style);
 
-    document.addEventListener("pointerdown", this.resizeStart.bind(QuackamoleGrid));
-    document.addEventListener("pointermove", this.resize.bind(QuackamoleGrid));
-    document.addEventListener("pointerup", this.resizeStop.bind(QuackamoleGrid));
-    window.addEventListener("blur", this.resizeStop.bind(QuackamoleGrid));
+    document.addEventListener('pointerdown', this.resizeStart.bind(QuackamoleGrid));
+    document.addEventListener('pointermove', this.resize.bind(QuackamoleGrid));
+    document.addEventListener('pointerup', this.resizeStop.bind(QuackamoleGrid));
+    window.addEventListener('blur', this.resizeStop.bind(QuackamoleGrid));
   }
 
   static registerGridItem(gridItem: HTMLElement, gridColumnStart = 1, gridRowStart = 1, gridColumnEnd = 1, gridRowEnd = 1) {
-    if (!gridItem) throw new Error(`GridItem not passed`);
-    if (!gridItem.id) throw new Error(`GridItem needs to have an id`);
+    if (!gridItem) throw new Error('GridItem not passed');
+    if (!gridItem.id) throw new Error('GridItem needs to have an id');
     gridItem.classList.add(this.CLASS_GRID_ITEM);
     this.insertResizeHandles(gridItem);
     gridItem.style.cssText = `
@@ -104,7 +104,7 @@ export class QuackamoleGrid {
 
   private static resize(e: PointerEvent) {
     // TODO there is sometimes an issue when mouseup event seems to be ignored and it continues to resize the element. Find out why
-    if (!this.resizer?.parentElement) return
+    if (!this.resizer?.parentElement) return;
     const containerCompStyle = getComputedStyle(this.container);
     const cellSizeX = parseInt(containerCompStyle.getPropertyValue('grid-template-columns').split('px ')[0]);
     const cellSizeY = parseInt(containerCompStyle.getPropertyValue('grid-template-rows').split('px ')[0]);
