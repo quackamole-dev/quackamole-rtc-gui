@@ -1,7 +1,7 @@
 import { Component, For, createMemo } from 'solid-js';
 import { GenericMediaStream } from './GenericMediaStream';
-import { QuackamoleGrid } from '../quackamole-grid/QuackamoleGrid';
 import { IUser, UserId } from 'quackamole-shared-types';
+import { QuackamoleGrid } from 'quackamole-grid';
 
 
 export const RoomMedia: Component<RoomMediaProps> = props => {

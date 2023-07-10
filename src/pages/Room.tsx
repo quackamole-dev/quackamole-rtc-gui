@@ -6,9 +6,9 @@ import { RoomLobby } from '../components/RoomLobby';
 import { useParams } from '@solidjs/router';
 import { RoomActionbar } from '../components/RoomActionbar';
 import { RoomMedia } from '../components/RoomMedia';
-import { QuackamoleGrid } from '../quackamole-grid/QuackamoleGrid';
 import { IUser, UserId } from 'quackamole-shared-types';
 import { QuackamoleHttpClient, QuackamoleRTCClient } from 'quackamole-rtc-client';
+import { QuackamoleGrid } from 'quackamole-grid';
 
 
 export const Room: Component = () => {

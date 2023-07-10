@@ -4,7 +4,7 @@ import { Component, For, createResource, createSignal } from 'solid-js';
 import { QuackamoleRTCClient, QuackamoleHttpClient  } from 'quackamole-rtc-client';
 import { Portal } from 'solid-js/web';
 import { RoomActionbarButton } from './RoomActionbarButton';
-import { QuackamoleGrid } from '../quackamole-grid/QuackamoleGrid';
+import { QuackamoleGrid } from 'quackamole-grid';
 
 export const RoomActionbar: Component<{ quackamole: QuackamoleRTCClient }> = (props) => {
   const [open, setOpen] = createSignal(false);
