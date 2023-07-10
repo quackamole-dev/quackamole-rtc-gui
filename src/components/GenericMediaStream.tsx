@@ -1,6 +1,6 @@
 import { Component, createEffect, Show } from 'solid-js';
 import { setVideoSrc } from '../utils/setVideoSource';
-import { IUser } from '../quackamole-rtc/quackamole';
+import { IUser } from 'quackamole-shared-types';
 import { TbVideoOff } from 'solid-icons/tb';
 
 

@@ -5,6 +5,3 @@ import './index.css';
 import {App} from "./App";
 
 render(() => <App/>, document.getElementById("root")!);
-
-
-// TODO Create Home component from where user can already create a space

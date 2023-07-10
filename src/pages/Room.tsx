@@ -1,12 +1,13 @@
 import { Component, Show, createEffect, createMemo, createResource, createSignal } from 'solid-js';
 import { useLocalStorage } from 'solidjs-use';
 import { RoomLobby } from '../components/RoomLobby';
-import { IUser, QuackamoleRTCClient, UserId } from '../quackamole-rtc/quackamole';
+import { QuackamoleRTCClient } from '../quackamole-rtc/quackamole';
 import { useParams } from '@solidjs/router';
 import { RoomActionbar } from '../components/RoomActionbar';
 import { RoomMedia } from '../components/RoomMedia';
 import { QuackamoleGrid } from '../quackamole-grid/QuackamoleGrid';
 import { QuackamoleHttpClient } from '../quackamole-rtc/QuackamoleHttp';
+import { IUser, UserId } from 'quackamole-shared-types';
 
 
 export const Room: Component = () => {

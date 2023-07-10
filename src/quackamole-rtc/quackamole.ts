@@ -1,20 +1,22 @@
+import * as Q from 'quackamole-shared-types';
+
 export class QuackamoleRTCClient {
   private socket: WebSocket;
   private socketId: string | null = null;
-  private currentRoom: IBaseRoom | null = null;
-  private currentPlugin: IPlugin | null = null;
+  private currentRoom: Q.IBaseRoom | null = null;
+  private currentPlugin: Q.IPlugin | null = null;
 
-  private localUser: IUser | null = null;
+  private localUser: Q.IUser | null = null;
   private localStream: MediaStream | undefined;
-  private localStreamMicEnabled = true;
-  private localStreamCamEnabled = true;
+  private localStreamMicEnabled = false;
+  private localStreamCamEnabled = false;
   private readonly localStreamConstraints: MediaStreamConstraints = defaultMediaConstraints;
 
   private iframe: HTMLIFrameElement | null = null;
-  private readonly awaitedPromises: Record<AwaitId, IAwaitedPromise> = {};
-  private readonly connections: Map<IUser['id'], PeerConnection> = new Map();
-  private readonly streams: Map<IUser['id'], MediaStream> = new Map();
-  private readonly users: Map<IUser['id'], IUser> = new Map();
+  private readonly awaitedPromises: Record<Q.AwaitId, Q.IAwaitedPromise> = {};
+  private readonly connections: Map<Q.IUser['id'], Q.PeerConnection> = new Map();
+  private readonly streams: Map<Q.IUser['id'], MediaStream> = new Map();
+  private readonly users: Map<Q.IUser['id'], Q.IUser> = new Map();
   private readonly iframeContainerLocator: any;
 
   constructor(url: string, iframeContainerLocator: string) {
@@ -28,11 +30,11 @@ export class QuackamoleRTCClient {
     window.addEventListener('message', evt => evt.data.type && evt.data.type.startsWith('PLUGIN') && this.handlePluginMessageLegacy(evt.data));
   }
 
-  onconnection = (id: string, connection: PeerConnection | null) => { };
-  onremoteuserdata = (id: string, userData: IUser | null) => { };
-  onlocaluserdata = (userData: IUser) => { };
+  onconnection = (id: string, connection: Q.PeerConnection | null) => { };
+  onremoteuserdata = (id: string, userData: Q.IUser | null) => { };
+  onlocaluserdata = (userData: Q.IUser) => { };
   onsocketstatus = (status: 'open' | 'closed' | 'error', evt?: Event) => { };
-  onsetplugin = (plugin: IPlugin | null, iframeId: string) => { };
+  onsetplugin = (plugin: Q.IPlugin | null, iframeId: string) => { };
 
   async toggleMicrophoneEnabled(): Promise<void> {
     this.localStreamMicEnabled = !this.localStreamMicEnabled;
@@ -44,7 +46,7 @@ export class QuackamoleRTCClient {
     if (this.localStream || this.localStreamCamEnabled) await this.startLocalStream();
   }
 
-  async setPlugin(plugin: IPlugin): Promise<void> {
+  async setPlugin(plugin: Q.IPlugin): Promise<void> {
     // TODO pass iframe element directly to this method.
     //  if there is an edit mode for a room, a select dropdown above the plugin content area could be shown.
     //  Since there could be multiple plugin content areas on the grid, this would make things easier to identify.
@@ -57,8 +59,8 @@ export class QuackamoleRTCClient {
       if (!document.body.contains(this.iframe)) throw new Error(`iframe could not be attached to locator: "${this.iframeContainerLocator}"`);
     }
 
-    const [awaitId, promise] = this.registerAwaitIdPromise<IPluginSetResponseMessage>();
-    const message: IPluginSetMessage = { action: 'plugin_set', awaitId, data: { plugin, iframeId: this.iframe.id, roomId: this.currentRoom.id } };
+    const [awaitId, promise] = this.registerAwaitIdPromise<Q.IPluginSetResponseMessage>();
+    const message: Q.IPluginSetMessage = { action: 'plugin_set', awaitId, data: { plugin, iframeId: this.iframe.id, roomId: this.currentRoom.id } };
     this.socket.send(JSON.stringify(message));
     const res = await promise;
     console.log('--------set plugin res', res);
@@ -67,13 +69,13 @@ export class QuackamoleRTCClient {
     this.onsetplugin(res.plugin, res.iframeId);
   }
 
-  async registerUser(displayName: string): Promise<IUser | Error> {
+  async registerUser(displayName: string): Promise<Q.IUser | Error> {
     console.log('trying to register user');
     if (!this.socket) return new Error('socket undefined');
     if (this.socket.readyState !== WebSocket.OPEN) return new Error('socket not open');
 
-    const [awaitId, promise] = this.registerAwaitIdPromise<IUserRegisterResponseMessage>();
-    const message: IUserRegisterMessage = { action: 'user_register', awaitId, data: { displayName } };
+    const [awaitId, promise] = this.registerAwaitIdPromise<Q.IUserRegisterResponseMessage>();
+    const message: Q.IUserRegisterMessage = { action: 'user_register', awaitId, data: { displayName } };
     this.socket.send(JSON.stringify(message));
     const response = await promise;
 
@@ -85,15 +87,15 @@ export class QuackamoleRTCClient {
     return response.user;
   }
 
-  async loginUser(): Promise<IUser | Error> {
+  async loginUser(): Promise<Q.IUser | Error> {
     const secret = localStorage.getItem('secret'); // TODO allow adapters to change behaviour or move login and register completely to a AnonymousLoginAdapter
     console.log('trying to login user with secret', secret);
     if (this.localUser) return new Error('already logged in');
     if (!secret) return new Error('secret not found. Please register first');
     if (!this.socket) return new Error('socket undefined');
     if (this.socket.readyState !== WebSocket.OPEN) return new Error('socket not open');
-    const [awaitId, promise] = this.registerAwaitIdPromise<IUserLoginResponseMessage>();
-    const message: IUserLoginMessage = { action: 'user_login', awaitId, data: { secret } };
+    const [awaitId, promise] = this.registerAwaitIdPromise<Q.IUserLoginResponseMessage>();
+    const message: Q.IUserLoginMessage = { action: 'user_login', awaitId, data: { secret } };
     this.socket.send(JSON.stringify(message));
     const response = await promise;
     if (response.errors?.length) return new Error(response.errors?.join(', '));
@@ -105,12 +107,12 @@ export class QuackamoleRTCClient {
     return response.user;
   }
 
-  async joinRoom(roomId: string): Promise<IBaseRoom | Error> {
+  async joinRoom(roomId: string): Promise<Q.IBaseRoom | Error> {
     if (!this.socket) return new Error('socket undefined');
     if (this.socket && !this.socketId) return new Error('socket id undefined');
     if (this.socket.readyState !== WebSocket.OPEN) return new Error('socket not open');
-    const [awaitId, promise] = this.registerAwaitIdPromise<IRoomJoinResponseMessage>();
-    const message: IRoomJoinMessage = { action: 'room_join', awaitId, data: { roomId } };
+    const [awaitId, promise] = this.registerAwaitIdPromise<Q.IRoomJoinResponseMessage>();
+    const message: Q.IRoomJoinMessage = { action: 'room_join', awaitId, data: { roomId } };
     this.socket.send(JSON.stringify(message));
     const response = await promise;
     if (response.errors?.length) return new Error(response.errors?.join(', '));
@@ -133,7 +135,12 @@ export class QuackamoleRTCClient {
   }
 
   async startLocalStream(): Promise<MediaStream | Error> {
-    if (!this.localStreamMicEnabled && !this.localStreamCamEnabled) await this.stopLocalStream();
+    // if (!this.localStreamMicEnabled && !this.localStreamCamEnabled) 
+    const audioTracks = this.localStream?.getAudioTracks();
+    const videoTracks = this.localStream?.getVideoTracks();
+    if (audioTracks?.length && !this.localStreamMicEnabled) audioTracks.forEach(t => t.stop());
+    if (videoTracks?.length && !this.localStreamCamEnabled) videoTracks.forEach(t => t.stop());
+    // await this.stopLocalStream(); // TODO instead of completely stopping the stream, just remove the tracks that are not needed anymore
     if (!this.localUser) return new Error('local user not set');
     const actualConstraints = { ...this.localStreamConstraints };
     actualConstraints.audio = this.localStreamMicEnabled ? actualConstraints.audio : false;
@@ -192,17 +199,17 @@ export class QuackamoleRTCClient {
     }
   }
 
-  private async handleUserJoined({ user }: IRoomEventJoinMessage['data']) {
+  private async handleUserJoined({ user }: Q.IRoomEventJoinMessage['data']) {
     user.stream = this.streams.get(user.id);
     this.onremoteuserdata(user.id, user);
     this.users.set(user.id, user);
   }
 
-  private async handleUserLeft({ user }: IRoomEventLeaveMessage['data']) {
+  private async handleUserLeft({ user }: Q.IRoomEventLeaveMessage['data']) {
     this.removeConnection(user.id);
   }
 
-  handleSetPlugin({ roomId, iframeId, plugin }: IRoomEventPluginSet['data']) {
+  handleSetPlugin({ roomId, iframeId, plugin }: Q.IRoomEventPluginSet['data']) {
     console.log(`remote user set plugin ${plugin?.url} for ${iframeId}`, this.iframe);
     if (!this.iframe) {
       this.iframe = document.createElement('iframe');
@@ -216,7 +223,7 @@ export class QuackamoleRTCClient {
     this.iframe.src = newSrc;
   }
 
-  private async handleSessionDescription(message: IMessageRelayDeliveryMessage<IRTCSessionDescriptionMessage>) {
+  private async handleSessionDescription(message: Q.IMessageRelayDeliveryMessage<Q.IRTCSessionDescriptionMessage>) {
     let connection = this.connections.get(message.senderId);
     if (!this.socketId) return console.error('handleSessionDescription - socketId not set');
     if (!this.currentRoom) return console.error('handleSessionDescription - currentRoom not set');
@@ -239,7 +246,7 @@ export class QuackamoleRTCClient {
     }
   }
 
-  private async handleRTCIceCandidates(message: IMessageRelayDeliveryMessage<IRTCIceCandidatesMessage>) {
+  private async handleRTCIceCandidates(message: Q.IMessageRelayDeliveryMessage<Q.IRTCIceCandidatesMessage>) {
     const connection = this.connections.get(message.senderId);
     console.log(`You received ICE CANDIDATES from "${message.senderId}"...`, connection, message);
     if (!connection) return console.error('handleRTCIceCandidates - connection not found');
@@ -257,18 +264,18 @@ export class QuackamoleRTCClient {
     }
   }
 
-  private handlePluginMessageLegacy(message: IPluginMessage) {
+  private handlePluginMessageLegacy(message: Q.IPluginMessageLegacy) {
     if (message.type === 'PLUGIN_SEND_TO_ALL_PEERS') this.sendPluginMessageToAllConnections(message);
     else if (message.type === 'PLUGIN_SEND_TO_PEER') this.sendPluginMessageToConnection(message);
   }
 
-  private sendPluginMessageToAllConnections(message: IPluginMessage) {
+  private sendPluginMessageToAllConnections(message: Q.IPluginMessageLegacy) {
     const data = { type: 'PLUGIN_DATA', payload: message.payload };
     console.log('-------------LEGACY PLUGIN MESSAGE---', data, this.connections);
     this.connections.forEach(c => this.sendDataToConnection(c.defaultDataChannel, data));
   };
 
-  private sendPluginMessageToConnection(message: IPluginMessage) {
+  private sendPluginMessageToConnection(message: Q.IPluginMessageLegacy) {
     const connection = this.connections.get(message.socketId);
     if (!connection) return console.error('sendPluginMessageToConnection - connection not found');
     const data = { type: 'PLUGIN_DATA', payload: message.payload };
@@ -283,24 +290,24 @@ export class QuackamoleRTCClient {
   }
 
 
-  private sendSessionDescriptionToConnection = async (connection: PeerConnection, isOffer = true) => {
+  private sendSessionDescriptionToConnection = async (connection: Q.PeerConnection, isOffer = true) => {
     if (!this.socketId) throw new Error('socketId not set');
     if (!this.currentRoom) throw new Error('currentRoom not set');
     const description = isOffer ? await connection.createOffer() : await connection.createAnswer();
     await connection.setLocalDescription(description);
     console.log('Sending description to remote peer...', description);
-    const data: IRTCSessionDescriptionMessage = { description, senderSocketId: this.socketId, micEnabled: this.localStreamMicEnabled, camEnabled: this.localStreamCamEnabled, streamEnabled: Boolean(this.localStream) };
-    const message: IMessageRelayMessage = { action: 'message_relay', receiverIds: [connection.remoteSocketId], roomId: this.currentRoom?.id, data };
+    const data: Q.IRTCSessionDescriptionMessage = { type: 'session_description', description, senderSocketId: this.socketId, micEnabled: this.localStreamMicEnabled, camEnabled: this.localStreamCamEnabled, streamEnabled: Boolean(this.localStream) };
+    const message: Q.IMessageRelayMessage = { action: 'message_relay', receiverIds: [connection.remoteSocketId], roomId: this.currentRoom?.id, data };
     this.socket.send(JSON.stringify(message));
   };
 
-  private async createConnection(remoteSocketId: string, createDataChannel = true): Promise<PeerConnection> {
+  private async createConnection(remoteSocketId: string, createDataChannel = true): Promise<Q.PeerConnection> {
     if (!this.socketId) throw new Error('socketId not defined');
     if (this.socketId === remoteSocketId) throw new Error('cannot connect with yourself');
-    if (this.connections.has(remoteSocketId)) return this.connections.get(remoteSocketId) as PeerConnection;
+    if (this.connections.has(remoteSocketId)) return this.connections.get(remoteSocketId) as Q.PeerConnection;
     console.log(`Creating new RTCPeerConnection with "${remoteSocketId}" ...`);
 
-    const newConnection = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }], iceCandidatePoolSize: 1 }) as PeerConnection;
+    const newConnection = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }], iceCandidatePoolSize: 1 }) as Q.PeerConnection;
     newConnection.remoteSocketId = remoteSocketId;
     if (createDataChannel) {
       newConnection.defaultDataChannel = newConnection.createDataChannel('default');
@@ -322,7 +329,7 @@ export class QuackamoleRTCClient {
     return newConnection;
   }
 
-  private removeConnection(connectionSocketId: SocketId) {
+  private removeConnection(connectionSocketId: Q.SocketId) {
     const connection = this.connections.get(connectionSocketId);
     if (!connection) return console.error('removeConnection - connection not found');
 
@@ -336,7 +343,7 @@ export class QuackamoleRTCClient {
     this.onremoteuserdata(connection.remoteSocketId, null);
   }
 
-  private setupConnectionListeners(connection: PeerConnection) {
+  private setupConnectionListeners(connection: Q.PeerConnection) {
     if (!this.socket) return;
     if (!this.socketId) return;
     if (!this.currentRoom) return;
@@ -354,8 +361,8 @@ export class QuackamoleRTCClient {
     const timer = () => { // TODO pass currentIteration as param
       if (iceCandidates.length) {
         console.log(`Sending ${iceCandidates.length}x ICE CANDIDATES to peer...`);
-        const data: IRTCIceCandidatesMessage = { type: 'ice_candidates', iceCandidates, senderSocketId };
-        const message: IMessageRelayMessage = { action: 'message_relay', roomId, data, receiverIds: [connection.remoteSocketId] };
+        const data: Q.IRTCIceCandidatesMessage = { type: 'ice_candidates', iceCandidates, senderSocketId };
+        const message: Q.IMessageRelayMessage = { action: 'message_relay', roomId, data, receiverIds: [connection.remoteSocketId] };
         this.socket.send(JSON.stringify(message));
         iceCandidates = [];
       }
@@ -375,12 +382,10 @@ export class QuackamoleRTCClient {
     };
 
     connection.ontrack = ({ track, streams }) => {
-      console.log('------------------ontrack', track, streams);
       if (!streams || !streams[0]) return console.error('ontrack - this should not happen... streams[0] is empty!');
       this.streams.set(connection.remoteSocketId, streams[0])
 
       const user = this.users.get(connection.remoteSocketId);
-      console.log(`A remote stream track was received from ${connection.remoteSocketId}...>>>>>`, user, '<<<<<-------user');
       if (!user) return; // no use in continuing when user not loaded yet
 
       user.stream = streams[0];
@@ -391,7 +396,7 @@ export class QuackamoleRTCClient {
     connection.oniceconnectionstatechange = () => connection.iceConnectionState === 'failed' && connection.restartIce();
     connection.onsignalingstatechange = evt => connection.signalingState === 'stable' && connection.localDescription && connection.remoteDescription && console.log('CONNECTION ESTABLISHED!! signaling state:', connection.signalingState);
     connection.ondatachannel = async evt => {
-      console.log('------------------------------------Remote peer opened a data channel with you...', evt);
+      console.log('Remote peer opened a data channel with you...', evt);
       connection.defaultDataChannel = evt.channel;
       this.setupDataChannelListeners(connection.defaultDataChannel);
     };
@@ -412,9 +417,9 @@ export class QuackamoleRTCClient {
     stream.getTracks().forEach(track => track.stop());
   }
 
-  private registerAwaitIdPromise<T>(awaitId = crypto.randomUUID()): [AwaitId, Promise<T>] {
-    let resolve: IAwaitedPromise['resolve'] = () => { };
-    let reject: IAwaitedPromise['resolve'] = () => { };
+  private registerAwaitIdPromise<T>(awaitId = crypto.randomUUID()): [Q.AwaitId, Promise<T>] {
+    let resolve: Q.IAwaitedPromise['resolve'] = () => { };
+    let reject: Q.IAwaitedPromise['resolve'] = () => { };
     const promise: Promise<T> = new Promise((res, rej) => {
       // @ts-ignore
       resolve = res;
@@ -435,211 +440,3 @@ const defaultMediaConstraints: MediaStreamConstraints = {
     height: { ideal: 72 }
   }
 };
-
-export type PeerConnection = RTCPeerConnection & { remoteSocketId: string, defaultDataChannel: RTCDataChannel, stream: MediaStream }; // TODO why stream needed here?
-
-export type Socket = WebSocket & { id: string };
-
-export type AwaitId = string;
-
-export interface IAwaitedPromise {
-  promise: Promise<unknown>;
-  resolve: (value: unknown | PromiseLike<unknown>) => void
-  reject: (reason?: any) => void;
-}
-
-/////////////////////////////////////////
-// SHARED 
-
-export interface IBaseRoom {
-  id: RoomId;
-  name: string;
-  maxUsers: number;
-  joinedUsers: string[]; // TODO make IUser but maybe only when retrieving or on demand?
-  adminUsers: string[];
-  metadata?: JSON;
-  parentRoom?: IBaseRoom;
-  childRooms?: IBaseRoom[];
-}
-
-export interface IAdminRoom extends IBaseRoom {
-  adminId: RoomId; // TODO implement
-}
-
-export type RoomJoinErrorCode = 'wrong_password' | 'already_full' | 'does_not_exist' | 'already_joined' | null | undefined;
-export type UserLoginErrorCode = 'user_not_found' | 'wrong_secret';
-
-export type RoomId = string;
-export type SocketId = string;
-export type UserId = string;
-
-export interface IPlugin {
-  id: string;
-  name: string;
-  version: string;
-  description: string;
-  url: string;
-}
-
-////////////////////////////////////////
-// DATA OR RESPONSE MESSAGES
-////////////////////////////////////////
-
-export interface IRTCSessionDescriptionMessage {
-  // type: 'offer' | 'answer';
-  description: RTCSessionDescriptionInit;
-  senderSocketId: SocketId;
-  micEnabled: boolean;
-  camEnabled: boolean;
-  streamEnabled: boolean;
-}
-
-export interface IRTCIceCandidatesMessage {
-  type: 'ice_candidates';
-  iceCandidates: RTCIceCandidateInit[];
-  senderSocketId: SocketId;
-}
-
-// Server needs to know these below too 
-export interface IUserRegisterResponseMessage {
-  type: 'user_register_response';
-  user: IUser;
-  secret: string;
-  errors: string[];
-}
-
-export interface IUserLoginResponseMessage {
-  type: 'user_login_response';
-  token: string;
-  user: IUser;
-  errors: UserLoginErrorCode[];
-}
-
-export interface IRoomJoinResponseMessage {
-  type: 'room_join_response';
-  errors: RoomJoinErrorCode[];
-  room: IBaseRoom;
-  users: IUser[];
-}
-
-export interface IRoomCreateResponseMessage {
-  type: 'room_create_response';
-  errors: string[];
-  room: IAdminRoom;
-}
-
-export interface IPluginSetResponseMessage {
-  type: 'plugin_set_response';
-  roomId: RoomId;
-  iframeId: string;
-  plugin: IPlugin | null;
-}
-
-export interface IMessageRelayDeliveryMessage<T = unknown> {
-  type: 'message_relay_delivery';
-  senderId: SocketId; // prevents malicious user from pretending to be someone else as this is set by server
-  data: T;
-}
-
-//////////////////////////////////////////
-
-export interface IBaseRoomEventMessage {
-  type: 'room_event';
-  roomId: RoomId;
-  eventType: 'user_joined' | 'user_left' | 'user_data_changed' | 'admin_settings_changed' | 'plugin_set';
-}
-
-export interface IRoomEventJoinMessage extends IBaseRoomEventMessage {
-  eventType: 'user_joined';
-  data: { user: IUser };
-}
-
-export interface IRoomEventLeaveMessage extends IBaseRoomEventMessage {
-  eventType: 'user_left';
-  data: { user: IUser };
-}
-
-export interface IRoomEventUserDataChangeMessage extends IBaseRoomEventMessage {
-  eventType: 'user_data_changed';
-  data: { user: IUser, changedProperties: (keyof IUser)[] };
-}
-
-export interface IRoomEventPluginSet extends IBaseRoomEventMessage {
-  eventType: 'plugin_set';
-  data: { roomId: RoomId, iframeId: string, plugin: IPlugin | null };
-}
-
-////////////////////////////////////////
-// CLIENT TO SERVER
-////////////////////////////////////////
-
-export type Actions = 'room_create' | 'room_join' | 'room_broadcast' | 'message_relay' | 'user_register' | 'user_login' | 'plugin_set';
-
-export type SocketToServerMessage = IMessageRelayMessage | ICreateRoomMessage | IRoomJoinMessage | IBroadcastMessage;
-
-interface IBaseSocketToServerMessage {
-  action: Actions;
-  awaitId?: string;
-  data?: Record<string, unknown> | string | number | unknown;
-}
-
-export interface IBroadcastMessage extends IBaseSocketToServerMessage {
-  roomIds: RoomId[];
-}
-
-export interface IMessageRelayMessage extends IBaseSocketToServerMessage {
-  roomId: RoomId;
-  receiverIds?: SocketId[];
-}
-
-export interface ICreateRoomMessage extends IBaseSocketToServerMessage {
-  data: Partial<IBaseRoom>;
-}
-
-export interface IRoomJoinMessage extends IBaseSocketToServerMessage {
-  data: { roomId: string };
-}
-
-export interface IUserRegisterMessage extends IBaseSocketToServerMessage {
-  data: { displayName: string };
-}
-
-export interface IUserLoginMessage extends IBaseSocketToServerMessage {
-  data: { secret: string };
-}
-
-export interface IPluginSetMessage extends IBaseSocketToServerMessage {
-  data: { roomId: string, iframeId: string, plugin: IPlugin | null };
-}
-
-///////////////////////////////////////
-
-export interface IPluginMessage {
-  type: 'PLUGIN_SEND_TO_ALL_PEERS' | 'PLUGIN_SEND_TO_PEER';
-  payload: unknown;
-  socketId: string;
-}
-
-// export interface IPluginMessage {
-//   data: { type: 'PLUGIN_SEND_TO_ALL_PEERS' | 'PLUGIN_SEND_TO_PEER', payload: unknown, socketId: string };
-// }
-
-///////////////////////////////
-
-export interface IUser {
-  id: string;
-  displayName: string;
-  status: string;
-  lastSeen: number;
-  stream?: MediaStream;
-}
-
-export interface IUserSecret {
-  userId: string;
-  secret: string;
-}
-
-// TODOS
-//  - toggle audio/video
-//  - save room layout as backend metadata and restore on join
-//  - join as admin

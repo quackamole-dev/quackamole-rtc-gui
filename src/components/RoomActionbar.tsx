@@ -1,9 +1,8 @@
 
 import { TbMicrophone, TbMicrophoneOff, TbVideoOff, TbMenu2 } from 'solid-icons/tb'
 import { Component, For, createResource, createSignal } from 'solid-js';
-import { IPlugin, QuackamoleRTCClient } from '../quackamole-rtc/quackamole';
+import { QuackamoleRTCClient } from '../quackamole-rtc/quackamole';
 import { Portal } from 'solid-js/web';
-import { TiThMenu } from 'solid-icons/ti';
 import { RoomActionbarButton } from './RoomActionbarButton';
 import { QuackamoleHttpClient } from '../quackamole-rtc/QuackamoleHttp';
 import { QuackamoleGrid } from '../quackamole-grid/QuackamoleGrid';

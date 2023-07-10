@@ -2,8 +2,8 @@ import type { Component } from 'solid-js';
 import { createMemo, createSignal, Show } from 'solid-js';
 import { A, useParams } from '@solidjs/router';
 import { TextCopyOutput } from './TextCopyOutput';
-import { IAdminRoom } from '../quackamole-rtc/quackamole';
 import { QuackamoleHttpClient } from '../quackamole-rtc/QuackamoleHttp';
+import { IAdminRoom } from 'quackamole-shared-types';
 
 export const RoomCreator: Component = () => {
   const params = useParams();

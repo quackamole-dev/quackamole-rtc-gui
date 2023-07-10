@@ -1,4 +1,4 @@
-import { IAdminRoom, IBaseRoom, IPlugin } from "./quackamole";
+import { IAdminRoom, IBaseRoom, IPlugin } from "quackamole-shared-types";
 
 export class QuackamoleHttpClient {
   static async createRoom(): Promise<IAdminRoom | Error> {
@@ -28,3 +28,4 @@ export class QuackamoleHttpClient {
     }
   }
 }
+
