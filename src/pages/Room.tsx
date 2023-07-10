@@ -1,4 +1,4 @@
-import { Component, Show, createEffect, createMemo, createResource, createSignal, onMount } from 'solid-js';
+import { Component, Show, createEffect, createMemo, createResource, createSignal } from 'solid-js';
 import { useLocalStorage } from 'solidjs-use';
 import { RoomLobby } from '../components/RoomLobby';
 import { IUser, QuackamoleRTCClient, UserId } from '../quackamole-rtc/quackamole';
@@ -10,8 +10,8 @@ import { QuackamoleHttpClient } from '../quackamole-rtc/QuackamoleHttp';
 
 
 export const Room: Component = () => {
-  const [users, setUsers] = createSignal<Record<UserId, IUser>>({}, { equals: false });
-  const [localUser, setLocalUser] = createSignal<IUser | null>(null, { equals: false });
+  const [users, setUsers] = createSignal<Record<UserId, IUser | null>>({});
+  const [localUser, setLocalUser] = createSignal<IUser | null>(null);
   const [socketStatus, setSocketStatus] = createSignal<'none' | 'open' | 'closed' | 'error'>('none');
   const [displayName, _] = useLocalStorage('displayName', '');
 
@@ -29,7 +29,7 @@ export const Room: Component = () => {
   const quackamole = createMemo(() => new QuackamoleRTCClient('ws://localhost:12000/ws', '#iframe-wrapper'));
   quackamole().onsocketstatus = status => { setSocketStatus(status) };
   quackamole().onlocaluserdata = user => setLocalUser({ ...user });
-  quackamole().onremoteuserdata = (id, userData) => setUsers({ ...users, [id]: userData });
+  quackamole().onremoteuserdata = (id, userData) => setUsers(users => ({ ...users, [id]: userData }));
 
   return <>
     <Show when={socketStatus() === 'open' && room()?.id} fallback={'Loading...'}>

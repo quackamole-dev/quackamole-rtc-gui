@@ -6,9 +6,9 @@ export class QuackamoleRTCClient {
 
   private localUser: IUser | null = null;
   private localStream: MediaStream | undefined;
-  private localStreamConstraints: MediaStreamConstraints = defaultMediaConstraints;
   private localStreamMicEnabled = true;
   private localStreamCamEnabled = true;
+  private readonly localStreamConstraints: MediaStreamConstraints = defaultMediaConstraints;
 
   private iframe: HTMLIFrameElement | null = null;
   private readonly awaitedPromises: Record<AwaitId, IAwaitedPromise> = {};
@@ -35,11 +35,13 @@ export class QuackamoleRTCClient {
   onsetplugin = (plugin: IPlugin | null, iframeId: string) => { };
 
   async toggleMicrophoneEnabled(): Promise<void> {
-
+    this.localStreamMicEnabled = !this.localStreamMicEnabled;
+    if (this.localStream || this.localStreamMicEnabled) await this.startLocalStream();
   }
 
   async toggleCameraEnabled(): Promise<void> {
-
+    this.localStreamCamEnabled = !this.localStreamCamEnabled;
+    if (this.localStream || this.localStreamCamEnabled) await this.startLocalStream();
   }
 
   async setPlugin(plugin: IPlugin): Promise<void> {
@@ -47,6 +49,7 @@ export class QuackamoleRTCClient {
     //  if there is an edit mode for a room, a select dropdown above the plugin content area could be shown.
     //  Since there could be multiple plugin content areas on the grid, this would make things easier to identify.
     if (!this.currentRoom) return;
+    if (this.iframe?.src && this.iframe.src === plugin.url) return;
     if (!this.iframe) {
       this.iframe = document.createElement('iframe');
       this.iframe.style.cssText = `width: 100%; height: 100%; border: none`;
@@ -130,17 +133,18 @@ export class QuackamoleRTCClient {
   }
 
   async startLocalStream(): Promise<MediaStream | Error> {
-    console.log('startLocalStream');
-    if (!this.localStreamMicEnabled && !this.localStreamCamEnabled) return new Error('both mic and cam are disabled');
+    if (!this.localStreamMicEnabled && !this.localStreamCamEnabled) await this.stopLocalStream();
     if (!this.localUser) return new Error('local user not set');
     const actualConstraints = { ...this.localStreamConstraints };
     actualConstraints.audio = this.localStreamMicEnabled ? actualConstraints.audio : false;
     actualConstraints.video = this.localStreamCamEnabled ? actualConstraints.video : false;
 
     try {
+      console.log('startLocalStream', this.localStreamMicEnabled, this.localStreamCamEnabled, actualConstraints);
       this.localStream = await navigator.mediaDevices.getUserMedia(actualConstraints);
       this.localUser.stream = this.localStream;
       this.onlocaluserdata({ ...this.localUser });
+      await this.updateStreamForConnections(this.localStream);
       return this.localStream;
     } catch (error) {
       this.localUser.stream = undefined;
@@ -148,6 +152,25 @@ export class QuackamoleRTCClient {
       return new Error('local stream couldn\'t be started');
     }
   };
+
+  private async stopLocalStream() {
+    if (!this.localStream) return;
+    console.log('stopLocalStream');
+    this.clearStreamTracks(this.localStream);
+    this.localStream = undefined;
+    this.updateStreamForConnections(this.localStream);
+  };
+
+  private async updateStreamForConnections(newStream?: MediaStream): Promise<void> {
+    const promises: Promise<void>[] = [];
+    for (const connection of this.connections.values()) {
+      console.log(`Updating localStream for RTCPeerConnection with "${connection.remoteSocketId}"...`);
+      await Promise.all(connection.getSenders().map(s => connection.removeTrack(s)));
+      if (newStream) await Promise.all(newStream.getTracks().map(t => connection.addTrack(t, newStream)));
+      promises.push(this.sendSessionDescriptionToConnection(connection, true));
+    }
+    await Promise.all(promises);
+  }
 
   private handleSocketMessages(messageRaw: string) {
     const m = JSON.parse(messageRaw);
@@ -203,6 +226,12 @@ export class QuackamoleRTCClient {
       if (!connection) connection = await this.createConnection(message.senderId, false);
       await connection.setRemoteDescription(new RTCSessionDescription(message.data.description));
       await this.sendSessionDescriptionToConnection(connection, false);
+      // When remote user disabled both cam and mic, we need to remove the stream here otherwise it remains stuck on last frame here.
+      const user = this.users.get(message.senderId);
+      if (user && !message.data.streamEnabled) {
+        user.stream = undefined;
+        this.onremoteuserdata(message.senderId, { ...user });
+      }
     } else if (message.data.description.type === 'answer') {
       if (!connection) return console.error('No offer was ever made for the received answer. Investigate!');
       console.log(`You received an ANSWER from "${message.senderId}"...`);
@@ -260,7 +289,7 @@ export class QuackamoleRTCClient {
     const description = isOffer ? await connection.createOffer() : await connection.createAnswer();
     await connection.setLocalDescription(description);
     console.log('Sending description to remote peer...', description);
-    const data: IRTCSessionDescriptionMessage = { description, senderSocketId: this.socketId };
+    const data: IRTCSessionDescriptionMessage = { description, senderSocketId: this.socketId, micEnabled: this.localStreamMicEnabled, camEnabled: this.localStreamCamEnabled, streamEnabled: Boolean(this.localStream) };
     const message: IMessageRelayMessage = { action: 'message_relay', receiverIds: [connection.remoteSocketId], roomId: this.currentRoom?.id, data };
     this.socket.send(JSON.stringify(message));
   };
@@ -346,6 +375,7 @@ export class QuackamoleRTCClient {
     };
 
     connection.ontrack = ({ track, streams }) => {
+      console.log('------------------ontrack', track, streams);
       if (!streams || !streams[0]) return console.error('ontrack - this should not happen... streams[0] is empty!');
       this.streams.set(connection.remoteSocketId, streams[0])
 
@@ -459,6 +489,9 @@ export interface IRTCSessionDescriptionMessage {
   // type: 'offer' | 'answer';
   description: RTCSessionDescriptionInit;
   senderSocketId: SocketId;
+  micEnabled: boolean;
+  camEnabled: boolean;
+  streamEnabled: boolean;
 }
 
 export interface IRTCIceCandidatesMessage {

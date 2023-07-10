@@ -5,7 +5,7 @@ import { QuackamoleGrid } from '../quackamole-grid/QuackamoleGrid';
 
 
 export const RoomMedia: Component<RoomMediaProps> = props => {
-  const validUsers = createMemo(() => Object.values(props.remoteUsers).filter(u => u));
+  const validUsers = createMemo(() => Object.values(props.remoteUsers).filter(u => Boolean(u)));
 
   return (
     <div id="mediabar" class="bg-stone-800 border rounded border-stone-600 p-[5px] select-none" ref={el => QuackamoleGrid.registerGridItem(el, 14, 1, 17, 11)}>
@@ -17,5 +17,5 @@ export const RoomMedia: Component<RoomMediaProps> = props => {
 
 interface RoomMediaProps {
   localUser: IUser | null;
-  remoteUsers: Record<UserId, IUser>;
+  remoteUsers: Record<UserId, IUser | null>;
 }
