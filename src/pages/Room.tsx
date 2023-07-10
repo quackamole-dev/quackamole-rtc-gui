@@ -1,3 +1,5 @@
+/* eslint-disable solid/reactivity */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Component, Show, createEffect, createMemo, createResource, createSignal } from 'solid-js';
 import { useLocalStorage } from 'solidjs-use';
 import { RoomLobby } from '../components/RoomLobby';
@@ -13,7 +15,7 @@ export const Room: Component = () => {
   const [users, setUsers] = createSignal<Record<UserId, IUser | null>>({});
   const [localUser, setLocalUser] = createSignal<IUser | null>(null);
   const [socketStatus, setSocketStatus] = createSignal<'none' | 'open' | 'closed' | 'error'>('none');
-  const [displayName, _] = useLocalStorage('displayName', '');
+  const [displayName] = useLocalStorage('displayName', '');
 
   const params = useParams();
   const [room] = createResource(() => QuackamoleHttpClient.getRoom(params.id));

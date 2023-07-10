@@ -5,7 +5,7 @@ import { QuackamoleRTCClient } from 'quackamole-rtc-client';
 
 export const RoomLobby: Component<{ quackamole: QuackamoleRTCClient, room: IBaseRoom }> = props => {
   let nameInput: HTMLInputElement;
-  const [_, setDisplayName] = useLocalStorage('displayName', '');
+  const setDisplayName = useLocalStorage('displayName', '')[1];
   const [registerUserError, setRegisterUserError] = createSignal('');
 
   const registerUser = async (displayName: string): Promise<void> => {
