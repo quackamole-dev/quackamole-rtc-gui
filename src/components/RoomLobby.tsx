@@ -10,7 +10,10 @@ export const RoomLobby: Component<{ quackamole: QuackamoleRTCClient, room: IBase
   const registerUser = async (displayName: string): Promise<void> => {
     const res = await props.quackamole.registerUser(displayName);
     if (res instanceof Error) setRegisterUserError(res.message);
-    else setDisplayName(res.displayName);
+    else {
+      setDisplayName(res.displayName);
+      props.quackamole.loginUser();
+    }
   };
 
   return <>

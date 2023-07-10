@@ -5,7 +5,7 @@ export class QuackamoleRTCClient {
   private currentPlugin: IPlugin | null = null;
 
   private localUser: IUser | null = null;
-  private localStream: MediaStream | null = null;
+  private localStream: MediaStream | undefined;
   private localStreamConstraints: MediaStreamConstraints = defaultMediaConstraints;
   private localStreamMicEnabled = true;
   private localStreamCamEnabled = true;
@@ -25,54 +25,28 @@ export class QuackamoleRTCClient {
     this.socket.onclose = evt => this.onsocketstatus('closed', evt);
     this.socket.onerror = evt => this.onsocketstatus('error', evt);
     this.iframeContainerLocator = iframeContainerLocator;
-
-    // setTimeout(() => {
-    //   this.iframe = document.createElement('iframe');
-    //   this.iframe.style.cssText = `width: 100%; height: 100%; border: none`;
-    //   document.querySelector(iframeContainerLocator)?.appendChild(this.iframe);
-    //   if (!document.body.contains(this.iframe)) throw new Error(`iframe could not be attached to locator: "${iframeContainerLocator}"`);
-    // }, 1000);
-
-    // console.log('---------iframe', this.iframe);
     window.addEventListener('message', evt => evt.data.type && evt.data.type.startsWith('PLUGIN') && this.handlePluginMessageLegacy(evt.data));
   }
 
   onconnection = (id: string, connection: PeerConnection | null) => { };
-  onremotestream = (id: string, stream: MediaStream | null) => { };
   onremoteuserdata = (id: string, userData: IUser | null) => { };
-  onlocalstream = (stream: MediaStream | null) => { };
   onlocaluserdata = (userData: IUser) => { };
   onsocketstatus = (status: 'open' | 'closed' | 'error', evt?: Event) => { };
-  onsetplugin = (plugin: IPlugin) => { };
+  onsetplugin = (plugin: IPlugin | null, iframeId: string) => { };
 
-  static async createRoom(): Promise<IAdminRoom | Error> {
-    try {
-      const res = await fetch(`http://localhost:12000/rooms`, { method: 'post', mode: 'cors' });
-      return await res.json();
-    } catch (e) {
-      return new Error('failed to create room');
-    }
+  async toggleMicrophoneEnabled(): Promise<void> {
+
   }
 
-  static async getRoom(id: string): Promise<IBaseRoom | Error> {
-    try {
-      const res = await fetch(`http://localhost:12000/rooms/${id}`, { method: 'get', mode: 'cors' });
-      return await res.json();
-    } catch (e) {
-      return new Error('failed to get room');
-    }
-  }
+  async toggleCameraEnabled(): Promise<void> {
 
-  static async getPlugins(): Promise<IPlugin | Error> {
-    try {
-      const res = await fetch(`http://localhost:12000/plugins`, { method: 'get', mode: 'cors' });
-      return await res.json();
-    } catch (e) {
-      return new Error('failed to fetch plugins');
-    }
   }
 
   async setPlugin(plugin: IPlugin): Promise<void> {
+    // TODO pass iframe element directly to this method.
+    //  if there is an edit mode for a room, a select dropdown above the plugin content area could be shown.
+    //  Since there could be multiple plugin content areas on the grid, this would make things easier to identify.
+    if (!this.currentRoom) return;
     if (!this.iframe) {
       this.iframe = document.createElement('iframe');
       this.iframe.style.cssText = `width: 100%; height: 100%; border: none`;
@@ -80,10 +54,14 @@ export class QuackamoleRTCClient {
       if (!document.body.contains(this.iframe)) throw new Error(`iframe could not be attached to locator: "${this.iframeContainerLocator}"`);
     }
 
+    const [awaitId, promise] = this.registerAwaitIdPromise<IPluginSetResponseMessage>();
+    const message: IPluginSetMessage = { action: 'plugin_set', awaitId, data: { plugin, iframeId: this.iframe.id, roomId: this.currentRoom.id } };
+    this.socket.send(JSON.stringify(message));
+    const res = await promise;
+    console.log('--------set plugin res', res);
     this.currentPlugin = plugin;
     this.iframe.src = plugin.url;
-    this.socket.send(JSON.stringify({ action: 'plugin_set', data: { pluginId: plugin.id } }));
-    this.onsetplugin(plugin);
+    this.onsetplugin(res.plugin, res.iframeId);
   }
 
   async registerUser(displayName: string): Promise<IUser | Error> {
@@ -100,7 +78,7 @@ export class QuackamoleRTCClient {
     if (response.secret.length === 0) return new Error('secret is empty');
 
     localStorage.setItem('secret', response.secret);
-    this.onlocaluserdata(response.user);
+    this.onlocaluserdata({ ...response.user });
     return response.user;
   }
 
@@ -119,7 +97,8 @@ export class QuackamoleRTCClient {
     console.log('loginUser success with socketId', response)
     this.socketId = response.user.id;
     this.localUser = response.user;
-    this.onlocaluserdata(response.user);
+    this.localUser.stream = this.localStream;
+    this.onlocaluserdata({ ...response.user });
     return response.user;
   }
 
@@ -133,6 +112,11 @@ export class QuackamoleRTCClient {
     const response = await promise;
     if (response.errors?.length) return new Error(response.errors?.join(', '));
     this.currentRoom = response.room;
+    response.users.forEach(u => {
+      if (u.id === this.localUser?.id) return;
+      this.users.set(u.id, u);
+      this.onremoteuserdata(u.id, u);
+    });
     await this.startLocalStream();
 
     // TODO this better be done with Promise.all()
@@ -148,16 +132,19 @@ export class QuackamoleRTCClient {
   async startLocalStream(): Promise<MediaStream | Error> {
     console.log('startLocalStream');
     if (!this.localStreamMicEnabled && !this.localStreamCamEnabled) return new Error('both mic and cam are disabled');
+    if (!this.localUser) return new Error('local user not set');
     const actualConstraints = { ...this.localStreamConstraints };
     actualConstraints.audio = this.localStreamMicEnabled ? actualConstraints.audio : false;
     actualConstraints.video = this.localStreamCamEnabled ? actualConstraints.video : false;
 
     try {
       this.localStream = await navigator.mediaDevices.getUserMedia(actualConstraints);
-      this.onlocalstream(this.localStream);
+      this.localUser.stream = this.localStream;
+      this.onlocaluserdata({ ...this.localUser });
       return this.localStream;
     } catch (error) {
-      this.onlocalstream(null);
+      this.localUser.stream = undefined;
+      this.onlocaluserdata({ ...this.localUser });
       return new Error('local stream couldn\'t be started');
     }
   };
@@ -175,18 +162,35 @@ export class QuackamoleRTCClient {
     }
 
     if (m.type === 'room_event') {
-      if (m.eventType === 'user_joined') return this.handleUserJoined(m.data.user);
-      else if (m.eventType === 'user_left') return this.handleUserLeft(m.data.user);
+      if (m.eventType === 'user_joined') return this.handleUserJoined(m.data);
+      else if (m.eventType === 'user_left') return this.handleUserLeft(m.data);
+      else if (m.eventType === 'plugin_set') return this.handleSetPlugin(m.data);
+      // else if (m.eventType === 'layout_changed') return this.handleLayoutChange(m.data.user);
     }
   }
 
-  private async handleUserJoined(user: IUser) {
+  private async handleUserJoined({ user }: IRoomEventJoinMessage['data']) {
+    user.stream = this.streams.get(user.id);
     this.onremoteuserdata(user.id, user);
     this.users.set(user.id, user);
   }
 
-  private async handleUserLeft(user: IUser) {
+  private async handleUserLeft({ user }: IRoomEventLeaveMessage['data']) {
     this.removeConnection(user.id);
+  }
+
+  handleSetPlugin({ roomId, iframeId, plugin }: IRoomEventPluginSet['data']) {
+    console.log(`remote user set plugin ${plugin?.url} for ${iframeId}`, this.iframe);
+    if (!this.iframe) {
+      this.iframe = document.createElement('iframe');
+      this.iframe.style.cssText = `width: 100%; height: 100%; border: none`;
+      document.querySelector(this.iframeContainerLocator)?.appendChild(this.iframe);
+      if (!document.body.contains(this.iframe)) throw new Error(`iframe could not be attached to locator: "${this.iframeContainerLocator}"`);
+    }
+
+    const newSrc = plugin?.url || '';
+    if (this.iframe.src && this.iframe.src === newSrc) return;
+    this.iframe.src = newSrc;
   }
 
   private async handleSessionDescription(message: IMessageRelayDeliveryMessage<IRTCSessionDescriptionMessage>) {
@@ -196,7 +200,7 @@ export class QuackamoleRTCClient {
 
     if (message.data.description.type === 'offer') {
       console.log(`You received an OFFER from "${message.senderId}"...`);
-      if (!connection) connection = await this.createConnection(message.senderId);
+      if (!connection) connection = await this.createConnection(message.senderId, false);
       await connection.setRemoteDescription(new RTCSessionDescription(message.data.description));
       await this.sendSessionDescriptionToConnection(connection, false);
     } else if (message.data.description.type === 'answer') {
@@ -261,7 +265,7 @@ export class QuackamoleRTCClient {
     this.socket.send(JSON.stringify(message));
   };
 
-  private async createConnection(remoteSocketId: string): Promise<PeerConnection> {
+  private async createConnection(remoteSocketId: string, createDataChannel = true): Promise<PeerConnection> {
     if (!this.socketId) throw new Error('socketId not defined');
     if (this.socketId === remoteSocketId) throw new Error('cannot connect with yourself');
     if (this.connections.has(remoteSocketId)) return this.connections.get(remoteSocketId) as PeerConnection;
@@ -269,8 +273,10 @@ export class QuackamoleRTCClient {
 
     const newConnection = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }], iceCandidatePoolSize: 1 }) as PeerConnection;
     newConnection.remoteSocketId = remoteSocketId;
-    newConnection.defaultDataChannel = newConnection.createDataChannel('default');
-    this.setupDataChannelListeners(newConnection.defaultDataChannel);
+    if (createDataChannel) {
+      newConnection.defaultDataChannel = newConnection.createDataChannel('default');
+      this.setupDataChannelListeners(newConnection.defaultDataChannel);
+    }
     this.setupConnectionListeners(newConnection);
 
     this.connections.set(remoteSocketId, newConnection);
@@ -298,7 +304,6 @@ export class QuackamoleRTCClient {
     this.streams.delete(connection.remoteSocketId);
     this.users.delete(connection.remoteSocketId);
     this.onconnection(connection.remoteSocketId, null);
-    this.onremotestream(connection.remoteSocketId, null);
     this.onremoteuserdata(connection.remoteSocketId, null);
   }
 
@@ -342,9 +347,14 @@ export class QuackamoleRTCClient {
 
     connection.ontrack = ({ track, streams }) => {
       if (!streams || !streams[0]) return console.error('ontrack - this should not happen... streams[0] is empty!');
-      console.log(`A remote stream track was received from ${connection.remoteSocketId}...`);
       this.streams.set(connection.remoteSocketId, streams[0])
-      this.onremotestream(connection.remoteSocketId, streams[0]);
+
+      const user = this.users.get(connection.remoteSocketId);
+      console.log(`A remote stream track was received from ${connection.remoteSocketId}...>>>>>`, user, '<<<<<-------user');
+      if (!user) return; // no use in continuing when user not loaded yet
+
+      user.stream = streams[0];
+      this.onremoteuserdata(connection.remoteSocketId, { ...user });
     };
 
     connection.onnegotiationneeded = () => console.log(`(negotiationneeded for connection "${connection.remoteSocketId}"...)`);
@@ -354,7 +364,6 @@ export class QuackamoleRTCClient {
       console.log('------------------------------------Remote peer opened a data channel with you...', evt);
       connection.defaultDataChannel = evt.channel;
       this.setupDataChannelListeners(connection.defaultDataChannel);
-      // dispatch(introduceYourself(connection.defaultDataChannel));
     };
   }
 
@@ -365,8 +374,6 @@ export class QuackamoleRTCClient {
     dataChannel.onclose = () => console.log('datachannel close');
     dataChannel.onerror = evt => console.log('datachannel error:', evt);
     dataChannel.onmessage = evt => this.handleDataChannelMessages(evt.data);
-
-    // setTimeout(() => dataChannel.send('hello from datachannel'), 3000);
   };
 
   private clearStreamTracks = (stream?: MediaStream) => {
@@ -375,7 +382,6 @@ export class QuackamoleRTCClient {
     stream.getTracks().forEach(track => track.stop());
   }
 
-  /////////////////////////////////////
   private registerAwaitIdPromise<T>(awaitId = crypto.randomUUID()): [AwaitId, Promise<T>] {
     let resolve: IAwaitedPromise['resolve'] = () => { };
     let reject: IAwaitedPromise['resolve'] = () => { };
@@ -480,6 +486,7 @@ export interface IRoomJoinResponseMessage {
   type: 'room_join_response';
   errors: RoomJoinErrorCode[];
   room: IBaseRoom;
+  users: IUser[];
 }
 
 export interface IRoomCreateResponseMessage {
@@ -488,17 +495,52 @@ export interface IRoomCreateResponseMessage {
   room: IAdminRoom;
 }
 
+export interface IPluginSetResponseMessage {
+  type: 'plugin_set_response';
+  roomId: RoomId;
+  iframeId: string;
+  plugin: IPlugin | null;
+}
+
 export interface IMessageRelayDeliveryMessage<T = unknown> {
   type: 'message_relay_delivery';
   senderId: SocketId; // prevents malicious user from pretending to be someone else as this is set by server
   data: T;
 }
 
+//////////////////////////////////////////
+
+export interface IBaseRoomEventMessage {
+  type: 'room_event';
+  roomId: RoomId;
+  eventType: 'user_joined' | 'user_left' | 'user_data_changed' | 'admin_settings_changed' | 'plugin_set';
+}
+
+export interface IRoomEventJoinMessage extends IBaseRoomEventMessage {
+  eventType: 'user_joined';
+  data: { user: IUser };
+}
+
+export interface IRoomEventLeaveMessage extends IBaseRoomEventMessage {
+  eventType: 'user_left';
+  data: { user: IUser };
+}
+
+export interface IRoomEventUserDataChangeMessage extends IBaseRoomEventMessage {
+  eventType: 'user_data_changed';
+  data: { user: IUser, changedProperties: (keyof IUser)[] };
+}
+
+export interface IRoomEventPluginSet extends IBaseRoomEventMessage {
+  eventType: 'plugin_set';
+  data: { roomId: RoomId, iframeId: string, plugin: IPlugin | null };
+}
+
 ////////////////////////////////////////
 // CLIENT TO SERVER
 ////////////////////////////////////////
 
-export type Actions = 'room_create' | 'room_join' | 'room_broadcast' | 'message_relay' | 'user_register' | 'user_login';
+export type Actions = 'room_create' | 'room_join' | 'room_broadcast' | 'message_relay' | 'user_register' | 'user_login' | 'plugin_set';
 
 export type SocketToServerMessage = IMessageRelayMessage | ICreateRoomMessage | IRoomJoinMessage | IBroadcastMessage;
 
@@ -533,6 +575,10 @@ export interface IUserLoginMessage extends IBaseSocketToServerMessage {
   data: { secret: string };
 }
 
+export interface IPluginSetMessage extends IBaseSocketToServerMessage {
+  data: { roomId: string, iframeId: string, plugin: IPlugin | null };
+}
+
 ///////////////////////////////////////
 
 export interface IPluginMessage {
@@ -552,6 +598,7 @@ export interface IUser {
   displayName: string;
   status: string;
   lastSeen: number;
+  stream?: MediaStream;
 }
 
 export interface IUserSecret {
@@ -561,8 +608,5 @@ export interface IUserSecret {
 
 // TODOS
 //  - toggle audio/video
-//  - all users in room can see stream of each other
 //  - save room layout as backend metadata and restore on join
 //  - join as admin
-//  - super basic styling
-//  - 

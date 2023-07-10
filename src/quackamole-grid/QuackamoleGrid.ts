@@ -1,5 +1,6 @@
 export class QuackamoleGrid {
-  private static CLASS_RESIZER = 'quackamole-grid-resizer';
+  private static CLASS_GRID_CONTAINER = 'quackamole-grid-container';
+  private static CLASS_GRID_ITEM = 'quackamole-grid-item';
   private static CLASS_EDGE_T = 'quackamole-grid-edge-t';
   private static CLASS_EDGE_R = 'quackamole-grid-edge-r';
   private static CLASS_EDGE_B = 'quackamole-grid-edge-b';
@@ -8,28 +9,50 @@ export class QuackamoleGrid {
   private static CLASS_CORNER_TR = 'quackamole-grid-corner-tr';
   private static CLASS_CORNER_BL = 'quackamole-grid-corner-bl';
   private static CLASS_CORNER_BR = 'quackamole-grid-corner-br';
+  private static CLASS_RESIZER = 'quackamole-grid-resizer';
+  private static CLASS_RESIZING = 'quackamole-grid-resizing';
+  private static RESIZER_WIDTH = 5;
+  private static container: HTMLElement;
 
-  static init(containerId: string, columns = 16, rows = 10, gridGap = 6, resizerWidth = 6) {
-    const container = document.getElementById(containerId);
-    if (!container) throw new Error(`Container with id ${containerId} not found`);
-    container.classList.add('quackamole-grid-container');
+  // all properties below are set whenever a resize is about to happen.
+  private static resizer: HTMLElement | null = null;
+  private static posStart: { x: number, y: number } = { x: 0, y: 0 };
+  private static computedStyle: CSSStyleDeclaration | null = null;
+  private static gridColumnStart = -1;
+  private static gridColumnEnd = -1;
+  private static gridRowStart = -1;
+  private static gridRowEnd = -1;
+
+  static init(container: HTMLElement, columns = 16, rows = 10, gridGap = 6) {
+    if (!container) throw new Error(`Container not passed`);
+    if (!container.id) throw new Error(`Container needs to have an id`);
+    container.classList.add(this.CLASS_GRID_CONTAINER);
+    // Applying specific styles inline ensures that we can have multiple differently configured grid containers if needed.
+    container.style.cssText = `
+      padding: ${gridGap}px;
+      grid-gap: ${gridGap}px;
+      grid-template-columns: repeat(${columns}, 1fr);
+      grid-template-rows: repeat(${rows}, 1fr);
+    `;
     this.container = container;
 
+    // A <style> tag is inserted into the html for overall styles that are not specific to a single grid container or grid item.
     document.getElementById('quackamole-grid-styles')?.remove();
     const style: HTMLStyleElement = document.createElement('style');
     style.id = 'quackamole-grid-styles';
-    style.appendChild(document.createTextNode(this.quackamoleGridCssFactory(containerId, columns, rows, gridGap, resizerWidth)));
+    style.appendChild(document.createTextNode(this.quackamoleGridCssFactory()));
     document.head.insertAdjacentElement("beforeend", style);
 
-    document.addEventListener("mousedown", this.mousedownHandler.bind(QuackamoleGrid));
-    document.addEventListener("mousemove", this.mousemoveHandler.bind(QuackamoleGrid));
-    document.addEventListener("mouseup", this.mouseupHandler.bind(QuackamoleGrid));
+    document.addEventListener("pointerdown", this.resizeStart.bind(QuackamoleGrid));
+    document.addEventListener("pointermove", this.resize.bind(QuackamoleGrid));
+    document.addEventListener("pointerup", this.resizeStop.bind(QuackamoleGrid));
+    window.addEventListener("blur", this.resizeStop.bind(QuackamoleGrid));
   }
 
-  static registerGridItem(gridItemId: string, gridColumnStart = 1, gridRowStart = 1, gridColumnEnd = 1, gridRowEnd = 1) {
-    const gridItem = document.getElementById(gridItemId);
-    if (!gridItem) throw new Error(`GridItem with id ${gridItemId} not found`);
-    gridItem.classList.add('quackamole-grid-item');
+  static registerGridItem(gridItem: HTMLElement, gridColumnStart = 1, gridRowStart = 1, gridColumnEnd = 1, gridRowEnd = 1) {
+    if (!gridItem) throw new Error(`GridItem not passed`);
+    if (!gridItem.id) throw new Error(`GridItem needs to have an id`);
+    gridItem.classList.add(this.CLASS_GRID_ITEM);
     this.insertResizeHandles(gridItem);
     gridItem.style.cssText = `
       grid-column-start: ${gridColumnStart};
@@ -39,18 +62,6 @@ export class QuackamoleGrid {
       position: relative;
     `;
   }
-  private static container: HTMLElement;
-  // gridItemClass: string;
-  // options: QuackamoleGridOptions | undefined;
-  // defaultOptions: QuackamoleGridOptions = defaultOptions;
-
-  private static resizer: HTMLElement | null = null;
-  private static posStart: { x: number, y: number } = { x: 0, y: 0 };
-  private static computedStyle: CSSStyleDeclaration | null = null;
-  private static gridColumnStart = -1;
-  private static gridColumnEnd = -1;
-  private static gridRowStart = -1;
-  private static gridRowEnd = -1;
 
   private static insertResizeHandles(el: HTMLElement) {
     const resizerLeft = document.createElement('div');
@@ -79,7 +90,7 @@ export class QuackamoleGrid {
     el.appendChild(resizerBottomRight);
   }
 
-  private static mousedownHandler(e: MouseEvent) {
+  private static resizeStart(e: PointerEvent) {
     if (!(e.target as HTMLElement).classList.contains(this.CLASS_RESIZER)) return;
     this.resizer = e.target as HTMLElement;
     this.posStart = { x: e.clientX, y: e.clientY };
@@ -88,10 +99,10 @@ export class QuackamoleGrid {
     this.gridColumnEnd = parseInt(this.computedStyle.getPropertyValue('grid-column-end'));
     this.gridRowStart = parseInt(this.computedStyle.getPropertyValue('grid-row-start'));
     this.gridRowEnd = parseInt(this.computedStyle.getPropertyValue('grid-row-end'));
-    (e.target as HTMLElement)?.parentElement?.classList.add('resizing');
+    (e.target as HTMLElement)?.parentElement?.classList.add(this.CLASS_RESIZING);
   }
 
-  private static mousemoveHandler(e: MouseEvent) {
+  private static resize(e: PointerEvent) {
     // TODO there is sometimes an issue when mouseup event seems to be ignored and it continues to resize the element. Find out why
     if (!this.resizer?.parentElement) return
     const containerCompStyle = getComputedStyle(this.container);
@@ -109,20 +120,16 @@ export class QuackamoleGrid {
     if (cl.contains(this.CLASS_EDGE_B) || cl.contains(this.CLASS_CORNER_BL) || cl.contains(this.CLASS_CORNER_BR)) pes.gridRowEnd = String(this.gridRowEnd + changeY);
   }
 
-  private static mouseupHandler(e: MouseEvent) {
+  private static resizeStop() {
     if (!this.resizer) return;
-    this.resizer?.parentElement?.classList.remove('resizing');
+    this.resizer?.parentElement?.classList.remove(this.CLASS_RESIZING);
     this.resizer = null;
   }
 
-  private static quackamoleGridCssFactory(containerId: string, columns: number, rows: number, gridGap: number, resizerWidth: number) {
+  private static quackamoleGridCssFactory() {
     return `
-      #${containerId}.quackamole-grid-container {
+      .${this.CLASS_GRID_CONTAINER} {
         display: grid;
-        padding: ${gridGap}px;
-        grid-template-columns: repeat(${columns}, 1fr);
-        grid-template-rows: repeat(${rows}, 1fr);
-        grid-gap: ${gridGap}px;
       }
 
       .${this.CLASS_RESIZER} {
@@ -133,7 +140,7 @@ export class QuackamoleGrid {
       }
 
       .${this.CLASS_RESIZER}.${this.CLASS_EDGE_L} {
-        width: ${resizerWidth}px;
+        width: ${this.RESIZER_WIDTH}px;
         top: 0;
         bottom: 0;
         left: 0;
@@ -141,7 +148,7 @@ export class QuackamoleGrid {
       }
 
       .${this.CLASS_RESIZER}.${this.CLASS_EDGE_R} {
-        width: ${resizerWidth}px;
+        width: ${this.RESIZER_WIDTH}px;
         top: 0;
         bottom: 0;
         right: 0;
@@ -149,7 +156,7 @@ export class QuackamoleGrid {
       }
 
       .${this.CLASS_RESIZER}.${this.CLASS_EDGE_T} {
-        height: ${resizerWidth}px;
+        height: ${this.RESIZER_WIDTH}px;
         top: 0;
         left: 0;
         right: 0;
@@ -157,7 +164,7 @@ export class QuackamoleGrid {
       }
 
       .${this.CLASS_RESIZER}.${this.CLASS_EDGE_B} {
-        height: ${resizerWidth}px;
+        height: ${this.RESIZER_WIDTH}px;
         bottom: 0;
         left: 0;
         right: 0;
@@ -168,8 +175,8 @@ export class QuackamoleGrid {
       .${this.CLASS_RESIZER}.${this.CLASS_CORNER_TR},
       .${this.CLASS_RESIZER}.${this.CLASS_CORNER_BL},
       .${this.CLASS_RESIZER}.${this.CLASS_CORNER_BR} {
-        width: ${resizerWidth}px;
-        height: ${resizerWidth}px;
+        width: ${this.RESIZER_WIDTH}px;
+        height: ${this.RESIZER_WIDTH}px;
         z-index: 1002;
       }
 
@@ -197,12 +204,12 @@ export class QuackamoleGrid {
         cursor: se-resize;
       }
 
-      .quackamole-grid-item {
+      .${this.CLASS_GRID_ITEM} {
         overflow: hidden;
         position: relative;
       }
 
-      .quackamole-grid-item.resizing::after {
+      .${this.CLASS_GRID_ITEM}.${this.CLASS_RESIZING}::after {
         content: "";
         position: absolute;
         top: 0;
