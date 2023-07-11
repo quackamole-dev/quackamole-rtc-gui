@@ -7,7 +7,7 @@ import { useParams } from '@solidjs/router';
 import { RoomActionbar } from '../components/RoomActionbar';
 import { RoomMedia } from '../components/RoomMedia';
 import { IUser, UserId } from 'quackamole-shared-types';
-import { QuackamoleHttpClient, QuackamoleRTCClient } from 'quackamole-rtc-client';
+import { QuackamoleRTCClient } from 'quackamole-rtc-client';
 import { QuackamoleGrid } from 'quackamole-grid';
 
 
@@ -17,8 +17,13 @@ export const Room: Component = () => {
   const [socketStatus, setSocketStatus] = createSignal<'none' | 'open' | 'closed' | 'error'>('none');
   const [displayName] = useLocalStorage('displayName', '');
 
+  const quackamole = createMemo(() => new QuackamoleRTCClient(import.meta.env.VITE_BACKEND_URL, import.meta.env.VITE_BACKEND_SECURE === 'true', '#iframe-wrapper'));
+  quackamole().onsocketstatus = status => { setSocketStatus(status); };
+  quackamole().onlocaluserdata = user => setLocalUser({ ...user });
+  quackamole().onremoteuserdata = (id, userData) => setUsers(users => ({ ...users, [id]: userData }));
+
   const params = useParams();
-  const [room] = createResource(() => QuackamoleHttpClient.getRoom(params.id));
+  const [room] = createResource(() => quackamole().http.getRoom(params.id));
 
   createEffect(() => {
     const r = room();
@@ -27,11 +32,6 @@ export const Room: Component = () => {
     if (!u && socketStatus() === 'open' && r) return quackamole().loginUser().then(() => quackamole().joinRoom(r.id));
     quackamole().joinRoom(r.id);
   });
-
-  const quackamole = createMemo(() => new QuackamoleRTCClient('ws://localhost:12000/ws', '#iframe-wrapper'));
-  quackamole().onsocketstatus = status => { setSocketStatus(status); };
-  quackamole().onlocaluserdata = user => setLocalUser({ ...user });
-  quackamole().onremoteuserdata = (id, userData) => setUsers(users => ({ ...users, [id]: userData }));
 
   return <>
     <Show when={socketStatus() === 'open' && room()?.id} fallback={'Loading...'}>

@@ -1,5 +1,5 @@
 {
-  "name": "quackamole",
+  "name": "quackamole-rtc-gui",
   "version": "0.0.3",
   "description": "Quackamole",
   "scripts": {
@@ -27,7 +27,7 @@
   "dependencies": {
     "@solidjs/router": "^0.8.2",
     "quackamole-grid": "^0.0.1",
-    "quackamole-rtc-client": "^0.0.3",
+    "quackamole-rtc-client": "^0.0.7",
     "solid-icons": "^1.0.11",
     "solid-js": "^1.7.7",
     "solidjs-use": "^2.2.1",
