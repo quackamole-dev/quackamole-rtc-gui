@@ -1,6 +1,6 @@
 {
   "name": "quackamole-rtc-gui",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "description": "Quackamole",
   "scripts": {
     "lint": "eslint src",
@@ -18,7 +18,7 @@
     "eslint": "^8.44.0",
     "eslint-plugin-solid": "^0.12.1",
     "postcss": "^8.4.25",
-    "quackamole-shared-types": "^0.0.3",
+    "quackamole-shared-types": "^0.1.0",
     "tailwindcss": "^3.3.2",
     "typescript": "^5.1.6",
     "vite": "^4.4.2",
@@ -27,7 +27,7 @@
   "dependencies": {
     "@solidjs/router": "^0.8.2",
     "quackamole-grid": "^0.0.1",
-    "quackamole-rtc-client": "^0.0.7",
+    "quackamole-rtc-client": "^0.1.0",
     "solid-icons": "^1.0.11",
     "solid-js": "^1.7.7",
     "solidjs-use": "^2.2.1",

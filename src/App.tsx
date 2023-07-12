@@ -8,7 +8,7 @@ import { QuackamoleHttpClient } from 'quackamole-rtc-client';
 export const App: Component = () => {
   onMount(() => {
     const secure = import.meta.env.VITE_BACKEND_SECURE === 'true';
-    QuackamoleHttpClient.baseUrl = `${secure ? 'https' : 'http'}://${import.meta.env.VITE_BACKEND_URL}`;
+    QuackamoleHttpClient.baseUrl = `${secure ? 'https' : 'http'}://${import.meta.env.VITE_BACKEND_API_URL}`;
   });
   return (
     <Router>

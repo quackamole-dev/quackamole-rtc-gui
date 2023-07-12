@@ -17,7 +17,7 @@ export const Room: Component = () => {
   const [socketStatus, setSocketStatus] = createSignal<'none' | 'open' | 'closed' | 'error'>('none');
   const [displayName] = useLocalStorage('displayName', '');
 
-  const quackamole = createMemo(() => new QuackamoleRTCClient(import.meta.env.VITE_BACKEND_URL, import.meta.env.VITE_BACKEND_SECURE === 'true', '#iframe-wrapper'));
+  const quackamole = createMemo(() => new QuackamoleRTCClient(import.meta.env.VITE_BACKEND_API_URL, import.meta.env.VITE_BACKEND_WS_URL, import.meta.env.VITE_BACKEND_SECURE === 'true', '#iframe-wrapper'));
   quackamole().onsocketstatus = status => { setSocketStatus(status); };
   quackamole().onlocaluserdata = user => setLocalUser({ ...user });
   quackamole().onremoteuserdata = (id, userData) => setUsers(users => ({ ...users, [id]: userData }));
