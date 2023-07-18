@@ -10,7 +10,6 @@ import { IUser, UserId } from 'quackamole-shared-types';
 import { QuackamoleRTCClient } from 'quackamole-rtc-client';
 import { QuackamoleGrid } from 'quackamole-grid';
 
-
 export const Room: Component = () => {
   const [users, setUsers] = createSignal<Record<UserId, IUser | null>>({});
   const [localUser, setLocalUser] = createSignal<IUser | null>(null);
@@ -32,7 +31,7 @@ export const Room: Component = () => {
     if (!u && socketStatus() === 'open' && r) return quackamole().loginUser().then(() => quackamole().joinRoom(r.id));
     quackamole().joinRoom(r.id);
   });
-
+  
   return <>
     <Show when={socketStatus() === 'open' && room()?.id} fallback={'Loading...'}>
       <Show when={displayName()} fallback={<RoomLobby quackamole={quackamole()} room={room()!} />}>

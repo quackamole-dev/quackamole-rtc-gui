@@ -22,12 +22,13 @@
     "tailwindcss": "^3.3.2",
     "typescript": "^5.1.6",
     "vite": "^4.4.2",
+    "vite-plugin-pwa": "^0.16.4",
     "vite-plugin-solid": "^2.7.0"
   },
   "dependencies": {
     "@solidjs/router": "^0.8.2",
     "quackamole-grid": "^0.0.1",
-    "quackamole-rtc-client": "^0.1.0",
+    "quackamole-rtc-client": "^0.1.1",
     "solid-icons": "^1.0.11",
     "solid-js": "^1.7.7",
     "solidjs-use": "^2.2.1",
