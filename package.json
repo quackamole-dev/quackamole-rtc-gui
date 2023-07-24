@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@solidjs/router": "^0.8.2",
+    "qr-code-styling": "^1.6.0-rc.1",
     "quackamole-grid": "^0.0.1",
     "quackamole-rtc-client": "^0.1.5",
     "solid-icons": "^1.0.11",
