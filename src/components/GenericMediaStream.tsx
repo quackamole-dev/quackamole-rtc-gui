@@ -1,15 +1,14 @@
 import { Component, createEffect, Show } from 'solid-js';
 import { setVideoSrc } from '../utils/setVideoSource';
-import { IUser } from 'quackamole-shared-types';
 import { TbVideoOff } from 'solid-icons/tb';
+import { IUserInfo } from 'quackamole-rtc-client/dist/QuackamoleRTCClient';
 
-
-export const GenericMediaStream: Component<{ user: IUser | null, mute?: boolean, flipX?: boolean }> = props => {
+export const GenericMediaStream: Component<{ userInfo: IUserInfo, mute?: boolean, flipX?: boolean }> = props => {
   let videoRef: HTMLVideoElement;
   let containerRef: HTMLElement;
 
   createEffect(() => {
-    const s = props.user?.stream;
+    const s = props.userInfo?.stream;
     if (!s) return;
     if (!s.getAudioTracks()[0]) {
       containerRef.style.boxShadow = 'none';
@@ -49,17 +48,17 @@ export const GenericMediaStream: Component<{ user: IUser | null, mute?: boolean,
   });
 
   createEffect(() => {
-    const s = props.user?.stream;
+    const s = props.userInfo?.stream;
     if (!s) return;
     setVideoSrc(videoRef, s, props.mute);
   });
 
   return (
-    <div class="relative w-full h-[130px] border border-stone-600 rounded overflow-hidden mb-[5px]" ref={el => containerRef = el}>
-      <Show when={props.user?.stream} fallback={<TbVideoOff class="text-2xl" />}>
+    <div class="relative w-full aspect-video max-h-full max-w-full border border-stone-600 rounded overflow-hidden mb-[5px] bg-stone-500" ref={el => containerRef = el}>
+      <Show when={props.userInfo?.stream} fallback={<TbVideoOff class="text-2xl" />}>
         <video class={'object-cover w-full h-full' + (props.flipX ? ' -scale-x-100' : '')} ref={el => videoRef = el} />
       </Show>
-      <div class="absolute left-1 bottom-1 text-white select-none" style={{'text-shadow':'0 1px 2px rgba(0,0,0,.6), 0 0 2px rgba(0,0,0,.3)'}}>{props.user?.displayName || '---'}</div>
+      <div class="absolute left-1 bottom-1 text-white select-none" style={{'text-shadow':'0 1px 2px rgba(0,0,0,.6), 0 0 2px rgba(0,0,0,.3)'}}>{props.userInfo?.user?.displayName || '---'}</div>
     </div>
   );
 };

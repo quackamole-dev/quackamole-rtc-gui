@@ -2,18 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --resizer-size: 5px;
-  --grid-gap: 6px;
-}
-
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-family: 'Press Start 2P', "Roboto", "Helvetica", "Arial", sans-serif;
+  color: white;
+  text-shadow: 2px 2px 1px rgb(0 0 0);
 }
 
 code {
@@ -32,7 +27,105 @@ body {
 }
 
 * {
-  font-family: 'Press Start 2P', cursive;
+  font-family: 'Press Start 2P', "Roboto", "Helvetica", "Arial", sans-serif;
   color: white;
   text-shadow: 2px 2px 1px rgb(0 0 0);
+}
+
+input::placeholder {
+  text-shadow: none;
+}
+
+.q-loading {
+  background-color: #0c0a09;
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  bottom: 0;
+}
+
+.q-loading .heartbeat {
+  color: white;
+  font-size: 2rem;
+  font-weight: 300;
+  letter-spacing: 2px;
+  animation: heartbeat 2000ms infinite;
+}
+
+@keyframes heartbeat {
+  0% {
+      transform: scale(1);
+  }
+  25% {
+      transform: scale(1.05);
+  }
+  50% {
+      transform: scale(1);
+  }
+  75% {
+      transform: scale(1.05);
+  }
+  100% {
+      transform: scale(1);
+  }
+}
+
+.q-btn-primary {
+  @apply cursor-pointer mt-3 flex w-full justify-center rounded-md bg-indigo-600 px-6 py-3 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600
+}
+.q-btn-secondary {
+  @apply cursor-pointer mt-3 flex w-full justify-center rounded-md px-6 py-3 text-sm font-semibold leading-6 text-white hover:bg-stone-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-500
+}
+.q-btn-action-2 {
+  @apply cursor-pointer w-[42px] h-[42px] flex rounded justify-center items-center border m-2 border-stone-600 bg-stone-700 hover:bg-stone-600 hover:border-stone-500 text-2xl
+}
+.q-btn-action {
+  @apply cursor-pointer w-[42px] h-[42px] flex rounded justify-center items-center m-2 hover:bg-stone-600 hover:border-stone-500 text-2xl
+}
+.q-input-text {
+  @apply text-xs w-full h-11 px-3 py-2 rounded bg-stone-700 overflow-hidden whitespace-nowrap border border-stone-600
+}
+
+.q-card {
+  @apply border bg-stone-800 rounded border-stone-600 select-none
+}
+.q-card-lighter {
+  @apply border bg-stone-600 rounded border-stone-400 select-none
+}
+
+.q-text-bubble {
+  @apply w-full text-center q-card p-3 text-sm relative
+}
+
+.q-text-bubble-triangle {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-top: 23px solid transparent;
+  border-right: 23px solid transparent;
+  border-bottom: 23px solid #57534e;
+  transform: rotate(-45deg);
+  bottom: -14px;
+  left: 33%;
+  border-radius: 0 0 0 5px;
+}
+
+.q-text-bubble-triangle::after {
+  content: "";
+  position: relative;
+  border-top: 22px solid transparent;
+  border-right: 22px solid transparent;
+  border-bottom: 22px solid #292524;
+  top: -17px;
+  right: -1px;
+  border-radius: 0 0 0 5px;
+}
+
+.q-invisible-scroll::-webkit-scrollbar {
+  display: none;
 }
