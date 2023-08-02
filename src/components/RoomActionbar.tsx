@@ -73,7 +73,7 @@ export const RoomActionbar: Component<{ quackamole: QuackamoleRTCClient, userInf
             <div class="flex flex-row items-center p-3">
               <div class="relative w-full">
                 <input type="text" class="q-input-text !h-[40px] !pr-10 text-ellipsis" aria-label={'chat input'} ref={el => chatInputRef = el} />
-                <div class="cursor-pointer absolute right-0 top-1/2 h-full text-2xl w-10 -translate-y-1/2 flex justify-center items-center" onClick={sendChatMessage(chatInputRef.value)}><AiOutlineSend /></div>
+                <div class="cursor-pointer absolute right-0 top-1/2 h-full text-2xl w-10 -translate-y-1/2 flex justify-center items-center" /*onClick={sendChatMessage(chatInputRef.value)} */><AiOutlineSend /></div>
               </div>
             </div>
           </div>
